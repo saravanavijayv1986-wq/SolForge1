@@ -219,7 +219,7 @@ export const buy = api<BuySOLFRequest, BuySOLFResponse>(
       // Record the purchase in database
       const purchaseRecord = await launchpadDB.queryRow<PurchaseRecord>`
         INSERT INTO launchpad_purchases (wallet, sol_sent, solf_paid, fee_paid, tx_sig)
-        VALUES (${req.wallet}, ${solSpent}, ${solfToDistribute}, ${teamTransfer}, ${req.txSig})
+        VALUES (${req.wallet}, ${solSpent.toString()}::numeric, ${solfToDistribute.toString()}::numeric, ${teamTransfer.toString()}::numeric, ${req.txSig})
         RETURNING id, wallet, sol_sent as "solSent", solf_paid as "solfPaid", 
                   fee_paid as "feePaid", tx_sig as "txSig", created_at as "createdAt"
       `;

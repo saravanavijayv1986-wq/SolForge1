@@ -111,7 +111,7 @@ export const updateToken = api<UpdateTokenRequest, UpdateTokenResponse>(
       const query = `
         UPDATE tokens 
         SET ${updates.join(', ')}
-        WHERE id = $${paramIndex}
+        WHERE id = $${paramIndex}::integer
         RETURNING mint_address as "mintAddress", is_mintable as "isMintable", is_frozen as "isFrozen", updated_at as "updatedAt"
       `;
       values.push(token.id);
@@ -161,8 +161,8 @@ export const getStats = api<GetTokenStatsRequest, TokenStats>(
           THEN (CAST(t.total_minted AS NUMERIC) / CAST(t.supply AS NUMERIC) * 100)::DOUBLE PRECISION
           ELSE 0 
         END as "percentageMinted",
-        (SELECT COUNT(DISTINCT wallet_address) FROM token_balances WHERE token_id = t.id AND CAST(balance AS NUMERIC) > 0) as "uniqueHolders",
-        (SELECT COUNT(*) FROM token_mints WHERE token_id = t.id) as "totalMints",
+        (SELECT COUNT(DISTINCT wallet_address)::INTEGER FROM token_balances WHERE token_id = t.id AND CAST(balance AS NUMERIC) > 0) as "uniqueHolders",
+        (SELECT COUNT(*)::INTEGER FROM token_mints WHERE token_id = t.id) as "totalMints",
         t.is_mintable as "isMintable",
         t.is_frozen as "isFrozen",
         t.created_at as "createdAt"
@@ -199,13 +199,13 @@ export const getMintHistory = api<GetMintHistoryRequest, GetMintHistoryResponse>
         `SELECT id, recipient_address as "recipientAddress", amount, minted_by as "mintedBy", 
                 transaction_signature as "transactionSignature", created_at as "createdAt"
          FROM token_mints 
-         WHERE token_id = $1 
+         WHERE token_id = $1::integer 
          ORDER BY created_at DESC 
-         LIMIT $2 OFFSET $3`,
+         LIMIT $2::integer OFFSET $3::integer`,
         token.id, limit, offset
       ),
       tokenDB.rawQueryRow<{ count: number }>(
-        `SELECT COUNT(*) as count FROM token_mints WHERE token_id = $1`,
+        `SELECT COUNT(*)::INTEGER as count FROM token_mints WHERE token_id = $1::integer`,
         token.id
       )
     ]);

@@ -105,7 +105,7 @@ export const mint = api<MintTokenRequest, MintTokenResponse>(
         // Record the mint transaction
         const mintRecord = await tokenDB.queryRow<MintRecord>`
           INSERT INTO token_mints (token_id, mint_address, recipient_address, amount, minted_by, transaction_signature)
-          VALUES (${token.id}, ${req.mintAddress}, ${req.recipientAddress}, ${req.amount}, ${req.minterWallet}, ${transactionSignature})
+          VALUES (${token.id}, ${req.mintAddress}, ${req.recipientAddress}, ${req.amount}::numeric, ${req.minterWallet}, ${transactionSignature})
           RETURNING id, token_id as "tokenId", mint_address as "mintAddress", recipient_address as "recipientAddress", 
                     amount, minted_by as "mintedBy", transaction_signature as "transactionSignature", created_at as "createdAt"
         `;
@@ -117,7 +117,7 @@ export const mint = api<MintTokenRequest, MintTokenResponse>(
         // Update total minted amount
         await tokenDB.exec`
           UPDATE tokens 
-          SET total_minted = ${newTotalMinted.toString()}, updated_at = NOW()
+          SET total_minted = ${newTotalMinted.toString()}::numeric, updated_at = NOW()
           WHERE id = ${token.id}
         `;
 
@@ -133,13 +133,13 @@ export const mint = api<MintTokenRequest, MintTokenResponse>(
         if (existingBalance) {
           await tokenDB.exec`
             UPDATE token_balances 
-            SET balance = ${newBalance.toString()}, last_updated = NOW()
+            SET balance = ${newBalance.toString()}::numeric, last_updated = NOW()
             WHERE token_id = ${token.id} AND wallet_address = ${req.recipientAddress}
           `;
         } else {
           await tokenDB.exec`
             INSERT INTO token_balances (token_id, mint_address, wallet_address, balance)
-            VALUES (${token.id}, ${req.mintAddress}, ${req.recipientAddress}, ${newBalance.toString()})
+            VALUES (${token.id}, ${req.mintAddress}, ${req.recipientAddress}, ${newBalance.toString()}::numeric)
           `;
         }
 

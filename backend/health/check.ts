@@ -149,7 +149,7 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
       testUrl.searchParams.append("slippageBps", "50");
       
       const response = await fetch(testUrl.toString(), {
-        timeout: 5000,
+        signal: AbortSignal.timeout(5000),
         headers: { "accept": "application/json" }
       });
       
@@ -175,7 +175,7 @@ export const databaseHealth = api<void, { healthy: boolean; latency: number; det
     const start = Date.now();
     
     try {
-      const tokenResult = await tokenDB.queryRow`SELECT COUNT(*) as tokens FROM tokens`;
+      const tokenResult = await tokenDB.queryRow`SELECT COUNT(*)::INTEGER as tokens FROM tokens`;
 
       return {
         healthy: true,

@@ -88,7 +88,7 @@ export const getBalances = api<GetBalancesRequest, GetBalancesResponse>(
       FROM token_balances tb
       JOIN tokens t ON tb.token_id = t.id
       WHERE tb.wallet_address = ${req.walletAddress}
-        AND tb.balance != '0'
+        AND CAST(tb.balance AS NUMERIC) > 0
       ORDER BY tb.last_updated DESC
     `;
 

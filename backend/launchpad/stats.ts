@@ -85,7 +85,7 @@ export const getUserHistory = api<GetUserHistoryRequest, UserPurchaseHistory>(
         FROM launchpad_purchases 
         WHERE wallet = ${req.wallet}
         ORDER BY created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
+        LIMIT ${limit}::integer OFFSET ${offset}::integer
       `,
       launchpadDB.queryRow<{
         totalSolSpent: string;
@@ -136,7 +136,7 @@ export const getRecentPurchases = api<GetRecentPurchasesRequest, RecentPurchases
                fee_paid as "feePaid", tx_sig as "txSig", created_at as "createdAt"
         FROM launchpad_purchases 
         ORDER BY created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
+        LIMIT ${limit}::integer OFFSET ${offset}::integer
       `,
       launchpadDB.queryRow<{ count: number }>`
         SELECT COUNT(*)::INTEGER as count 

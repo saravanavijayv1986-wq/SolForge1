@@ -90,7 +90,7 @@ export const list = api<ListTokensRequest, ListTokensResponse>(
       countQuery += whereClause;
     }
     
-    query += ` ORDER BY t.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` ORDER BY t.created_at DESC LIMIT $${paramIndex}::integer OFFSET $${paramIndex + 1}::integer`;
     params.push(limit, offset);
     
     // For count query, we don't need the LIMIT and OFFSET params

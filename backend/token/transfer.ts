@@ -137,7 +137,7 @@ export const recordTransfer = api<TransferTokenRequest, TransferTokenResponse>(
           )
           VALUES (
             ${token.id}, ${req.mintAddress}, ${req.fromAddress}, ${req.toAddress}, 
-            ${req.amount}, ${req.transactionSignature}
+            ${req.amount}::numeric, ${req.transactionSignature}
           )
           RETURNING 
             id, mint_address as "mintAddress", from_address as "fromAddress", 
@@ -161,14 +161,14 @@ export const recordTransfer = api<TransferTokenRequest, TransferTokenResponse>(
         if (fromBalance) {
           await tokenDB.exec`
             UPDATE token_balances 
-            SET balance = ${newFromBalance.toString()}, last_updated = NOW()
+            SET balance = ${newFromBalance.toString()}::numeric, last_updated = NOW()
             WHERE token_id = ${token.id} AND wallet_address = ${req.fromAddress}
           `;
         } else {
           // This shouldn't happen in a real transfer, but handle gracefully
           await tokenDB.exec`
             INSERT INTO token_balances (token_id, mint_address, wallet_address, balance)
-            VALUES (${token.id}, ${req.mintAddress}, ${req.fromAddress}, ${newFromBalance.toString()})
+            VALUES (${token.id}, ${req.mintAddress}, ${req.fromAddress}, ${newFromBalance.toString()}::numeric)
           `;
         }
 
@@ -184,13 +184,13 @@ export const recordTransfer = api<TransferTokenRequest, TransferTokenResponse>(
         if (toBalance) {
           await tokenDB.exec`
             UPDATE token_balances 
-            SET balance = ${newToBalance.toString()}, last_updated = NOW()
+            SET balance = ${newToBalance.toString()}::numeric, last_updated = NOW()
             WHERE token_id = ${token.id} AND wallet_address = ${req.toAddress}
           `;
         } else {
           await tokenDB.exec`
             INSERT INTO token_balances (token_id, mint_address, wallet_address, balance)
-            VALUES (${token.id}, ${req.mintAddress}, ${req.toAddress}, ${newToBalance.toString()})
+            VALUES (${token.id}, ${req.mintAddress}, ${req.toAddress}, ${newToBalance.toString()}::numeric)
           `;
         }
 

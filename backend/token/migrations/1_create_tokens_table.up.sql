@@ -1,10 +1,10 @@
-CREATE TABLE tokens (
+CREATE TABLE IF NOT EXISTS tokens (
   id BIGSERIAL PRIMARY KEY,
   mint_address TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   symbol TEXT NOT NULL,
   decimals INTEGER NOT NULL CHECK (decimals >= 0 AND decimals <= 9),
-  supply TEXT NOT NULL,
+  supply NUMERIC(38,18) NOT NULL,
   description TEXT,
   logo_url TEXT,
   creator_wallet TEXT NOT NULL,
@@ -12,11 +12,11 @@ CREATE TABLE tokens (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_tokens_creator_wallet ON tokens(creator_wallet);
-CREATE INDEX idx_tokens_mint_address ON tokens(mint_address);
-CREATE INDEX idx_tokens_created_at ON tokens(created_at DESC);
-CREATE INDEX idx_tokens_symbol ON tokens(symbol);
-CREATE INDEX idx_tokens_name ON tokens(name);
+CREATE INDEX IF NOT EXISTS idx_tokens_creator_wallet ON tokens(creator_wallet);
+CREATE INDEX IF NOT EXISTS idx_tokens_mint_address ON tokens(mint_address);
+CREATE INDEX IF NOT EXISTS idx_tokens_created_at ON tokens(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tokens_symbol ON tokens(symbol);
+CREATE INDEX IF NOT EXISTS idx_tokens_name ON tokens(name);
 
 -- Add trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
