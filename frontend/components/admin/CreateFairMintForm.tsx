@@ -120,6 +120,19 @@ export function CreateFairMintForm() {
           return;
         }
 
+        // Check if the fairMint service is available
+        if (!backend || !backend.fairMint || typeof backend.fairMint.getAdminWallet !== 'function') {
+          console.error('Fair mint service not available on backend client');
+          setIsAuthorized(false);
+          setAdminCheckLoading(false);
+          toast({
+            title: "Service Error",
+            description: "Fair mint service is not available. Please check if the backend is running.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const response = await backend.fairMint.getAdminWallet();
         setAdminWallet(response.adminWallet);
         setIsAuthorized(publicKey.toString() === response.adminWallet);
