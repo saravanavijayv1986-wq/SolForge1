@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Flame, DollarSign, Clock, AlertTriangle, Shield, CheckCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Flame, DollarSign, Clock, AlertTriangle, Shield, CheckCircle, ExternalLink, TrendingUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Transaction } from '@solana/web3.js';
 import { parseSolanaError, formatSolanaError } from '../../utils/solana-errors';
 import { useWallet } from '../../providers/WalletProvider';
@@ -64,12 +66,14 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
   const [quoteTimeRemaining, setQuoteTimeRemaining] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [burnStep, setBurnStep] = useState<'preparing' | 'signing' | 'processing' | 'complete'>('preparing');
+  const [priceConfidence, setPriceConfidence] = useState<number>(0);
   const [checklistItems, setChecklistItems] = useState({
     splBurn: false,
     acceptedToken: false,
     validQuote: false,
     finalBurn: false,
     withinCaps: false,
+    priceAcceptable: false,
   });
   const { toast } = useToast();
 
@@ -94,6 +98,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
           const newTime = prev - 1;
           if (newTime <= 0) {
             setQuote(null);
+            setPriceConfidence(0);
             toast({
               title: "Quote Expired",
               description: "Your quote expired. Please get a new quote to continue.",
@@ -133,9 +138,20 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
       const timeRemaining = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
       setQuoteTimeRemaining(Math.max(0, timeRemaining));
 
+      // Determine price confidence based on source
+      let confidence = 0;
+      if (response.priceSource.includes('RAYDIUM')) {
+        confidence = response.priceSource === 'TOKEN/USDC' ? 95 : 85;
+      } else if (response.priceSource.includes('JUPITER')) {
+        confidence = 80;
+      } else {
+        confidence = 70;
+      }
+      setPriceConfidence(confidence);
+
       toast({
         title: "Quote Generated Successfully",
-        description: `Quote valid for ${timeRemaining} seconds. USD Value: $${parseFloat(response.usdValue).toFixed(2)}`,
+        description: `Quote valid for ${timeRemaining} seconds. USD Value: $${parseFloat(response.usdValue).toFixed(2)} (${confidence}% confidence)`,
       });
     } catch (error) {
       console.error('Failed to get quote:', error);
@@ -163,6 +179,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
       validQuote: false,
       finalBurn: false,
       withinCaps: false,
+      priceAcceptable: false,
     });
     
     setBurnStep('preparing');
@@ -227,6 +244,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
 
       setQuote(null);
       setQuoteTimeRemaining(0);
+      setPriceConfidence(0);
       reset();
       onBurnSuccess();
     } catch (error) {
@@ -276,6 +294,16 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
     }
   };
 
+  const getPriceConfidenceBadge = (confidence: number) => {
+    if (confidence >= 90) {
+      return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">High Confidence</Badge>;
+    } else if (confidence >= 80) {
+      return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Medium Confidence</Badge>;
+    } else {
+      return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Low Confidence</Badge>;
+    }
+  };
+
   const selectedToken = tokens.find(t => t.mintAddress === watchedValues.tokenMintAddress);
 
   if (!isLive) {
@@ -312,6 +340,17 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Raydium Pricing Notice */}
+          <Alert>
+            <TrendingUp className="h-4 w-4" />
+            <AlertDescription>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Pricing powered by Raydium DEX for maximum transparency</span>
+                <Badge variant="outline" className="text-xs">Raydium Only</Badge>
+              </div>
+            </AlertDescription>
+          </Alert>
+
           {!quote ? (
             <form onSubmit={handleSubmit(getQuote)} className="space-y-4">
               <div className="space-y-2">
@@ -377,7 +416,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
                 {isGettingQuote ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Getting Quote...
+                    Getting Raydium Quote...
                   </>
                 ) : (
                   <>
@@ -393,15 +432,18 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
               <div className="bg-white dark:bg-gray-900 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-semibold">Quote Details</h4>
-                  <div className={`flex items-center space-x-1 ${
-                    quoteTimeRemaining <= 30 ? 'text-red-600' : 
-                    quoteTimeRemaining <= 60 ? 'text-orange-600' : 
-                    'text-green-600'
-                  }`}>
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm font-mono">
-                      {formatTimeRemaining(quoteTimeRemaining)}
-                    </span>
+                  <div className="flex items-center space-x-2">
+                    <div className={`flex items-center space-x-1 ${
+                      quoteTimeRemaining <= 30 ? 'text-red-600' : 
+                      quoteTimeRemaining <= 60 ? 'text-orange-600' : 
+                      'text-green-600'
+                    }`}>
+                      <Clock className="h-4 w-4" />
+                      <span className="text-sm font-mono">
+                        {formatTimeRemaining(quoteTimeRemaining)}
+                      </span>
+                    </div>
+                    {getPriceConfidenceBadge(priceConfidence)}
                   </div>
                 </div>
                 
@@ -420,9 +462,22 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
                   </div>
                   <div>
                     <span className="text-muted-foreground">Price Source:</span>
-                    <p className="font-medium">{quote.priceSource}</p>
+                    <p className="font-medium text-blue-600">{quote.priceSource}</p>
                   </div>
                 </div>
+
+                {/* Price Confidence Warning */}
+                {priceConfidence < 85 && (
+                  <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <AlertDescription className="text-yellow-700 dark:text-yellow-300 text-xs">
+                      {priceConfidence < 70 ? 
+                        "Low confidence pricing - consider waiting for better market conditions" :
+                        "Medium confidence pricing - price may vary due to market volatility"
+                      }
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               {/* Limits */}
@@ -446,6 +501,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
                   onClick={() => {
                     setQuote(null);
                     setQuoteTimeRemaining(0);
+                    setPriceConfidence(0);
                   }}
                   className="flex-1"
                 >
@@ -453,7 +509,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
                 </Button>
                 <Button
                   onClick={handleBurnClick}
-                  disabled={quoteTimeRemaining <= 0}
+                  disabled={quoteTimeRemaining <= 0 || priceConfidence < 50}
                   className="flex-1"
                 >
                   <Flame className="mr-2 h-4 w-4" />
@@ -537,6 +593,20 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
 
               <div className="flex items-center space-x-2">
                 <Checkbox
+                  id="priceAcceptable"
+                  checked={checklistItems.priceAcceptable}
+                  onCheckedChange={(checked) => 
+                    setChecklistItems(prev => ({ ...prev, priceAcceptable: !!checked }))
+                  }
+                  disabled={isBurning}
+                />
+                <Label htmlFor="priceAcceptable" className="text-sm">
+                  I accept the Raydium price ({priceConfidence}% confidence)
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
                   id="finalBurn"
                   checked={checklistItems.finalBurn}
                   onCheckedChange={(checked) => 
@@ -570,6 +640,10 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
                 <div>Amount: {parseFloat(quote.tokenAmount).toLocaleString()} tokens</div>
                 <div>USD Value: ${parseFloat(quote.usdValue).toFixed(2)}</div>
                 <div>Est. SOLF: {parseFloat(quote.estimatedSolf).toLocaleString()}</div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <span>Price Source: {quote.priceSource}</span>
+                  {getPriceConfidenceBadge(priceConfidence)}
+                </div>
               </div>
             )}
 

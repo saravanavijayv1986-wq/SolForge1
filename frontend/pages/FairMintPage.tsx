@@ -3,12 +3,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Flame, Info, AlertTriangle, CheckCircle, DollarSign, RefreshCw, Shield, Clock } from 'lucide-react';
+import { Flame, Info, AlertTriangle, CheckCircle, DollarSign, RefreshCw, Shield, Clock, TrendingUp } from 'lucide-react';
 import { FairMintCountdown } from '../components/fair-mint/FairMintCountdown';
 import { AcceptedTokensGrid } from '../components/fair-mint/AcceptedTokensGrid';
 import { BurnQuoteCard } from '../components/fair-mint/BurnQuoteCard';
 import { FairMintLeaderboard } from '../components/fair-mint/FairMintLeaderboard';
 import { UserDashboard } from '../components/fair-mint/UserDashboard';
+import { VestingClaim } from '../components/fair-mint/VestingClaim';
+import { SafetyMonitor } from '../components/fair-mint/SafetyMonitor';
 import { useWallet } from '../providers/WalletProvider';
 import { WalletConnectPrompt } from '../components/wallet/WalletConnectPrompt';
 import backend from '~backend/client';
@@ -41,6 +43,9 @@ export function FairMintPage() {
     queryClient.invalidateQueries({ queryKey: ['fairMintUserBurns'] });
     queryClient.invalidateQueries({ queryKey: ['fairMintLeaderboard'] });
     queryClient.invalidateQueries({ queryKey: ['fairMintTokenLeaderboard'] });
+    queryClient.invalidateQueries({ queryKey: ['claimableAmount'] });
+    queryClient.invalidateQueries({ queryKey: ['vestingSchedule'] });
+    queryClient.invalidateQueries({ queryKey: ['safetyCheck'] });
   };
 
   const handleBurnSuccess = () => {
@@ -122,7 +127,7 @@ export function FairMintPage() {
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
                       <div>
                         <span className="font-medium text-foreground">Receive SOLF pro-rata by USD value burned</span>
-                        <p className="text-xs mt-1">Allocation based on USD value at time of burn using live Pyth pricing</p>
+                        <p className="text-xs mt-1">Allocation based on USD value at time of burn using live Raydium pricing</p>
                       </div>
                     </div>
                     
@@ -280,12 +285,20 @@ export function FairMintPage() {
               <UserDashboard userWallet={publicKey.toString()} eventId={eventData.event.id} />
             )}
 
+            {/* Vesting Claims - Show if event is finalized */}
+            {connected && publicKey && eventData.event && eventData.status === 'finalized' && (
+              <VestingClaim userWallet={publicKey.toString()} eventId={eventData.event.id} />
+            )}
+
             {/* Leaderboard */}
             <FairMintLeaderboard />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-8">
+            {/* Safety Monitor */}
+            <SafetyMonitor eventId={eventData.event.id} />
+
             {/* Burn Interface */}
             {connected ? (
               <BurnQuoteCard
