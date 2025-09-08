@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Plus, Trash2, AlertTriangle, Info, CheckCircle, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useWallet } from '../../providers/WalletProvider';
+import { ADMIN_WALLET_ADDRESS } from '../../config';
 import backend from '~backend/client';
 
 const acceptedTokenSchema = z.object({
@@ -120,22 +121,36 @@ export function CreateFairMintForm() {
           return;
         }
 
-        // Check if the fairmint service is available
-        if (!backend || !backend.fairmint || typeof backend.fairmint.getAdminWallet !== 'function') {
-          console.error('Fair mint service not available on backend client');
+        // Check if the fairmint service is available on the backend client
+        if (!backend || typeof backend !== 'object') {
+          console.error('Backend client not available');
           setIsAuthorized(false);
           setAdminCheckLoading(false);
           toast({
             title: "Service Error",
-            description: "Fair mint service is not available. Please check if the backend is running.",
+            description: "Backend client is not available. Please check if the backend is running.",
             variant: "destructive",
           });
           return;
         }
 
-        const response = await backend.fairmint.getAdminWallet();
-        setAdminWallet(response.adminWallet);
-        setIsAuthorized(publicKey.toString() === response.adminWallet);
+        // For now, use the hardcoded admin wallet from config
+        // This bypasses the backend call that's causing issues
+        const expectedAdminWallet = ADMIN_WALLET_ADDRESS;
+        setAdminWallet(expectedAdminWallet);
+        setIsAuthorized(publicKey.toString() === expectedAdminWallet);
+
+        // Try to call the backend service if available
+        try {
+          if (backend.fairmint && typeof backend.fairmint.getAdminWallet === 'function') {
+            const response = await backend.fairmint.getAdminWallet();
+            setAdminWallet(response.adminWallet);
+            setIsAuthorized(publicKey.toString() === response.adminWallet);
+          }
+        } catch (error) {
+          console.warn('Could not fetch admin wallet from backend, using config value:', error);
+          // Continue with config-based auth check
+        }
       } catch (error) {
         console.error('Failed to check admin authorization:', error);
         setIsAuthorized(false);
@@ -235,6 +250,11 @@ export function CreateFairMintForm() {
         treasuryAddress: data.treasuryAddress.trim(),
         referralPoolPercentage: data.referralPoolPercentage,
       };
+
+      // Check if backend service is available before calling
+      if (!backend.fairmint || typeof backend.fairmint.createEvent !== 'function') {
+        throw new Error('Fair mint service is not available. Please ensure the backend is running and the fairmint service is properly configured.');
+      }
 
       const response = await backend.fairmint.createEvent(payload);
 
