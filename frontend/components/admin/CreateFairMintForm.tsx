@@ -237,16 +237,16 @@ export function CreateFairMintForm() {
           tokenName: token.tokenName.trim(),
           tokenSymbol: token.tokenSymbol.trim().toUpperCase(),
           tokenLogoUrl: token.tokenLogoUrl?.trim() || undefined,
-          dailyCapUsd: String(token.dailyCapUsd),
+          dailyCapUsd: String(token.dailyCapUsd), // Ensure string
           dexPriceSource: token.dexPriceSource?.trim() || undefined,
         })),
         tgePercentage: data.tgePercentage,
         vestingDays: data.vestingDays,
         platformFeeBps: data.platformFeeBps,
-        maxPerWalletUsd: String(data.maxPerWalletUsd),
-        maxPerTxUsd: String(data.maxPerTxUsd),
+        maxPerWalletUsd: String(data.maxPerWalletUsd), // Ensure string
+        maxPerTxUsd: String(data.maxPerTxUsd),       // Ensure string
         quoteTtlSeconds: data.quoteTtlSeconds,
-        minTxUsd: String(data.minTxUsd),
+        minTxUsd: String(data.minTxUsd),             // Ensure string
         treasuryAddress: data.treasuryAddress.trim(),
         referralPoolPercentage: data.referralPoolPercentage,
       };
