@@ -49,8 +49,8 @@ export const getAdminWallet = api<void, GetAdminWalletResponse>(
       const wallet = adminWalletAddress();
       return { adminWallet: wallet };
     } catch (error) {
-      console.error("Failed to get admin wallet:", error);
-      throw APIError.internal("Admin wallet not configured");
+      console.error("Failed to get admin wallet secret:", error);
+      throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
     }
   }
 );
@@ -61,7 +61,13 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
   async (req) => {
     try {
       // 1. Authenticate admin
-      const expectedAdminWallet = adminWalletAddress();
+      let expectedAdminWallet: string;
+      try {
+        expectedAdminWallet = adminWalletAddress();
+      } catch (e) {
+        console.error("Admin wallet secret not set:", e);
+        throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
+      }
 
       if (req.adminWallet !== expectedAdminWallet) {
         console.warn(`Unauthorized admin access attempt from: ${req.adminWallet}`);
@@ -234,7 +240,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
         if (error instanceof APIError) {
           throw error;
         }
-        throw APIError.internal("An unexpected error occurred while creating the event.");
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw APIError.internal(`Database error during event creation: ${errorMessage}`);
       }
     } catch (error) {
       console.error("Admin event creation error:", error);
@@ -251,7 +258,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
         eventName: req.eventName
       });
       
-      throw APIError.internal("An unexpected error occurred while creating the event.");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw APIError.internal(`An unexpected error occurred: ${errorMessage}`);
     }
   }
 );
@@ -260,7 +268,14 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
 export const pauseEvent = api<{ adminWallet: string; eventId: number; reason?: string }, { success: boolean }>(
   { expose: true, method: "POST", path: "/fair-mint/admin/pause" },
   async (req) => {
-    const expectedAdminWallet = adminWalletAddress();
+    let expectedAdminWallet: string;
+    try {
+      expectedAdminWallet = adminWalletAddress();
+    } catch (e) {
+      console.error("Admin wallet secret not set:", e);
+      throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
+    }
+
     if (req.adminWallet !== expectedAdminWallet) {
       throw APIError.permissionDenied("You are not authorized to pause events.");
     }
@@ -285,7 +300,14 @@ export const pauseEvent = api<{ adminWallet: string; eventId: number; reason?: s
 export const resumeEvent = api<{ adminWallet: string; eventId: number; reason?: string }, { success: boolean }>(
   { expose: true, method: "POST", path: "/fair-mint/admin/resume" },
   async (req) => {
-    const expectedAdminWallet = adminWalletAddress();
+    let expectedAdminWallet: string;
+    try {
+      expectedAdminWallet = adminWalletAddress();
+    } catch (e) {
+      console.error("Admin wallet secret not set:", e);
+      throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
+    }
+
     if (req.adminWallet !== expectedAdminWallet) {
       throw APIError.permissionDenied("You are not authorized to resume events.");
     }
