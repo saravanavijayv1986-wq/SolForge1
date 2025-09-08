@@ -153,8 +153,8 @@ export const getQuote = api<GetQuoteRequest, GetQuoteResponse>(
         usd_value, estimated_solf, price_source, price_at_quote, expires_at
       )
       VALUES (
-        ${quoteId}, ${event.id}, ${req.userWallet}, ${req.tokenMintAddress}, ${tokenAmount},
-        ${usdValue}, ${estimatedSolf}, ${priceResponse.route}, ${tokenPrice}, ${expiresAt}
+        ${quoteId}, ${event.id}, ${req.userWallet}, ${req.tokenMintAddress}, ${String(tokenAmount)},
+        ${String(usdValue)}, ${String(estimatedSolf)}, ${priceResponse.route}, ${String(tokenPrice)}, ${expiresAt}
       )
     `;
 
