@@ -122,7 +122,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
     setIsGettingQuote(true);
 
     try {
-      const response = await backend.fairMint.getQuote({
+      const response = await backend.fairmint.getQuote({
         tokenMintAddress: data.tokenMintAddress,
         tokenAmount: data.tokenAmount,
         userWallet,
@@ -181,7 +181,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
     try {
       // Step 1: Create the burn transaction
       setBurnStep('preparing');
-      const burnTxResponse = await backend.fairMint.createBurnTransaction({
+      const burnTxResponse = await backend.fairmint.createBurnTransaction({
         quoteId: quote.quoteId,
         userWallet,
       });
@@ -193,7 +193,7 @@ export function BurnQuoteCard({ tokens, isLive, userWallet, onBurnSuccess }: Bur
 
       // Step 3: Process the burn
       setBurnStep('processing');
-      const response = await backend.fairMint.burnTokens({
+      const response = await backend.fairmint.burnTokens({
         quoteId: quote.quoteId,
         userWallet,
         transactionSignature: signedTransaction.signature || generateMockSignature(),

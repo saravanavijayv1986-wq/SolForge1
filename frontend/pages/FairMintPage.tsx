@@ -20,7 +20,7 @@ export function FairMintPage() {
   const { data: eventData, isLoading, isRefetching } = useQuery({
     queryKey: ['fairMintActiveEvent'],
     queryFn: async () => {
-      const response = await backend.fairMint.getActiveEvent();
+      const response = await backend.fairmint.getActiveEvent();
       return response;
     },
   });
@@ -29,7 +29,7 @@ export function FairMintPage() {
     queryKey: ['fairMintEventStats', eventData?.event?.id],
     queryFn: async () => {
       if (!eventData?.event?.id) return null;
-      const response = await backend.fairMint.getEventStats({ eventId: eventData.event.id });
+      const response = await backend.fairmint.getEventStats({ eventId: eventData.event.id });
       return response;
     },
     enabled: !!eventData?.event?.id,

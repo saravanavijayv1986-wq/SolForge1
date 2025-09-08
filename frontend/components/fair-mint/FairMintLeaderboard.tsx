@@ -31,7 +31,7 @@ export function FairMintLeaderboard() {
   const { data: userLeaderboard, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['fairMintLeaderboard'],
     queryFn: async () => {
-      const response = await backend.fairMint.getLeaderboard({});
+      const response = await backend.fairmint.getLeaderboard({});
       return response;
     },
   });
@@ -39,7 +39,7 @@ export function FairMintLeaderboard() {
   const { data: tokenLeaderboard, isLoading: isLoadingTokens } = useQuery({
     queryKey: ['fairMintTokenLeaderboard'],
     queryFn: async () => {
-      const response = await backend.fairMint.getTokenLeaderboard({});
+      const response = await backend.fairmint.getTokenLeaderboard({});
       return response;
     },
   });

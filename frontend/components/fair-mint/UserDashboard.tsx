@@ -30,7 +30,7 @@ export function UserDashboard({ userWallet, eventId }: UserDashboardProps) {
   const { data: userBurns, isLoading } = useQuery({
     queryKey: ['fairMintUserBurns', userWallet, eventId],
     queryFn: async () => {
-      const response = await backend.fairMint.getUserBurns({ userWallet, eventId });
+      const response = await backend.fairmint.getUserBurns({ userWallet, eventId });
       return response;
     },
     enabled: !!userWallet && !!eventId,

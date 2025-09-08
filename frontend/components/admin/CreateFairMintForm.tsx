@@ -120,8 +120,8 @@ export function CreateFairMintForm() {
           return;
         }
 
-        // Check if the fairMint service is available
-        if (!backend || !backend.fairMint || typeof backend.fairMint.getAdminWallet !== 'function') {
+        // Check if the fairmint service is available
+        if (!backend || !backend.fairmint || typeof backend.fairmint.getAdminWallet !== 'function') {
           console.error('Fair mint service not available on backend client');
           setIsAuthorized(false);
           setAdminCheckLoading(false);
@@ -133,7 +133,7 @@ export function CreateFairMintForm() {
           return;
         }
 
-        const response = await backend.fairMint.getAdminWallet();
+        const response = await backend.fairmint.getAdminWallet();
         setAdminWallet(response.adminWallet);
         setIsAuthorized(publicKey.toString() === response.adminWallet);
       } catch (error) {
@@ -236,7 +236,7 @@ export function CreateFairMintForm() {
         referralPoolPercentage: data.referralPoolPercentage,
       };
 
-      const response = await backend.fairMint.createEvent(payload);
+      const response = await backend.fairmint.createEvent(payload);
 
       toast({
         title: "Fair Mint Event Created Successfully! 🔥",
