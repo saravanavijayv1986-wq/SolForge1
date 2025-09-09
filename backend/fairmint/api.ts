@@ -44,13 +44,22 @@ async function fetchUsdPriceForMint(mint: string): Promise<number> {
   return solOut * usdcPerSol;
 }
 
-function hasBurnForMint(tx: ParsedTransactionWithMeta | null, mint: string): { burned: number, ok: boolean } {
+function hasBurnForMint(tx: ParsedTransactionWithMeta | null, mint: string, expectedSigner: string): { burned: number, ok: boolean } {
   if (!tx?.transaction?.message?.instructions) return { burned: 0, ok: false };
+
+  const signerAccount = tx.transaction.message.accountKeys.find(
+    (acc) => acc.pubkey.toBase58() === expectedSigner && acc.signer
+  );
+  if (!signerAccount) {
+    return { burned: 0, ok: false }; // Expected signer did not sign
+  }
+
   let total = 0;
   for (const ix of tx.transaction.message.instructions as ParsedInstruction[]) {
     if (ix.program === "spl-token" && (ix.parsed?.type === "burn" || ix.parsed?.type === "burnChecked")) {
       const info = ix.parsed?.info as any;
-      if (info?.mint === mint) {
+      // The authority for the burn should be the signer
+      if (info?.mint === mint && info?.authority === expectedSigner) {
         const amt = Number(info?.uiAmount || info?.tokenAmount?.uiAmount || 0);
         if (amt > 0) total += amt;
       }
@@ -125,6 +134,19 @@ interface BurnRequest {
   amountUi: string;
   txSig: string;
 }
+
+// ---------- API: get admin wallet ----------
+export const getAdminWallet = api<void, { adminWallet: string }>(
+  { expose: true, method: "GET", path: "/fairmint/admin/wallet" },
+  async () => {
+    try {
+      const wallet = adminWalletAddress();
+      return { adminWallet: wallet };
+    } catch (error) {
+      throw APIError.internal("Admin wallet secret is not configured.");
+    }
+  }
+);
 
 // ---------- API: list events ----------
 export interface EventSummary {
@@ -239,8 +261,8 @@ export const submitBurn = api<BurnRequest, { ok: boolean; usd: string }>(
     if (!allowed) throw APIError.invalidArgument("Event or token not active.");
 
     const tx = await conn.getParsedTransaction(req.txSig, { maxSupportedTransactionVersion: 0 });
-    const { ok, burned } = hasBurnForMint(tx, req.mintAddress);
-    if (!ok) throw APIError.invalidArgument("Submitted transaction does not contain a valid SPL burn for this mint.");
+    const { ok } = hasBurnForMint(tx, req.mintAddress, req.wallet);
+    if (!ok) throw APIError.invalidArgument("Submitted transaction does not contain a valid SPL burn for this mint signed by the provided wallet.");
 
     const usdPrice = await fetchUsdPriceForMint(req.mintAddress);
     const usdValue = usdPrice * Number(req.amountUi);

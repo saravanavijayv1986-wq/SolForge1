@@ -1,8 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { APP_CONFIG } from '../../config';
+import { useWallet } from '../../providers/WalletProvider';
+import backend from '~backend/client';
 
 export function AppFooter() {
+  const { connected, publicKey } = useWallet();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (connected && publicKey) {
+        try {
+          const res = await backend.fairmint.getAdminWallet();
+          setIsAdmin(publicKey.toString() === res.adminWallet);
+        } catch {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    checkAdmin();
+  }, [connected, publicKey]);
+
   return (
     <footer className="bg-background border-t border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -43,6 +64,13 @@ export function AppFooter() {
           <p className="text-center text-xs text-muted-foreground">
             © 2024 {APP_CONFIG.name}. All rights reserved. Built with Encore.ts and React.
           </p>
+          {isAdmin && (
+            <div className="text-center mt-4">
+              <Link to="/admin" className="text-sm text-purple-500 hover:underline">
+                Admin Panel
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </footer>
