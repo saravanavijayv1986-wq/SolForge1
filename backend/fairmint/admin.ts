@@ -123,8 +123,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
           throw APIError.invalidArgument("Token symbol is required for all tokens");
         }
 
-        const dailyCapUsd = parseFloat(token.dailyCapUsd);
-        if (isNaN(dailyCapUsd) || dailyCapUsd <= 0) {
+        const dailyCapUsdNum = parseFloat(token.dailyCapUsd);
+        if (isNaN(dailyCapUsdNum) || dailyCapUsdNum <= 0) {
           throw APIError.invalidArgument(`Invalid daily cap for token ${token.tokenSymbol}`);
         }
       }
@@ -175,8 +175,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
             referral_pool_percentage
           ) VALUES (
             ${req.eventName}, ${req.description || null}, ${req.startTime}, ${req.endTime}, true,
-            ${req.tgePercentage}, ${req.vestingDays}, ${req.platformFeeBps}, ${maxPerWalletUsdNum},
-            ${maxPerTxUsdNum}, ${req.quoteTtlSeconds}, ${minTxUsdNum}, ${req.treasuryAddress},
+            ${req.tgePercentage}, ${req.vestingDays}, ${req.platformFeeBps}, ${req.maxPerWalletUsd},
+            ${req.maxPerTxUsd}, ${req.quoteTtlSeconds}, ${req.minTxUsd}, ${req.treasuryAddress},
             ${req.referralPoolPercentage}
           )
           RETURNING 
@@ -206,15 +206,13 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
             throw APIError.invalidArgument(`Duplicate mint address: ${token.mintAddress}`);
           }
 
-          const dailyCapUsdNum = parseFloat(token.dailyCapUsd);
-
           const acceptedToken = await tx.queryRow<AcceptedToken>`
             INSERT INTO fair_mint_accepted_tokens (
               event_id, mint_address, token_name, token_symbol, token_logo_url,
               daily_cap_usd, dex_price_source
             ) VALUES (
               ${event.id}, ${token.mintAddress}, ${token.tokenName.trim()}, ${token.tokenSymbol.trim().toUpperCase()}, ${token.tokenLogoUrl || null},
-              ${dailyCapUsdNum}, ${token.dexPriceSource?.trim() || null}
+              ${token.dailyCapUsd}, ${token.dexPriceSource?.trim() || null}
             )
             RETURNING
               id, event_id as "eventId", mint_address as "mintAddress",
