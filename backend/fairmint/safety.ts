@@ -1,8 +1,6 @@
 import { api, APIError } from "encore.dev/api";
 import { fairMintDB } from "./db";
-import { secret } from "encore.dev/config";
-
-const adminWalletAddress = secret("AdminWalletAddress");
+import { getAdminWallet as getAdminWalletAddress } from "../config";
 
 export interface SafetyCheck {
   checkType: string;
@@ -287,7 +285,7 @@ export const emergencyAction = api<EmergencyAction, { success: boolean; message:
   { expose: true, method: "POST", path: "/fair-mint/safety/emergency" },
   async (req) => {
     // Verify admin authorization
-    const expectedAdminWallet = adminWalletAddress();
+    const expectedAdminWallet = getAdminWalletAddress();
     if (req.adminWallet !== expectedAdminWallet) {
       throw APIError.permissionDenied("Only authorized administrators can perform emergency actions");
     }

@@ -1,9 +1,9 @@
 import { api, APIError } from "encore.dev/api";
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { secret } from "encore.dev/config";
+import { getAdminWallet as getAdminWalletAddress } from "../config";
 
 const solanaRpcUrl = secret("SolanaRpcUrl");
-const adminWalletAddress = secret("AdminWalletAddress");
 
 export interface ProcessFeeRequest {
   fromAddress: string;
@@ -33,7 +33,7 @@ export const createFeeTransaction = api<CreateFeeTransactionRequest, CreateFeeTr
     try {
       const connection = new Connection(solanaRpcUrl(), 'confirmed');
       const fromPubkey = new PublicKey(req.fromAddress);
-      const toPubkey = new PublicKey(adminWalletAddress());
+      const toPubkey = new PublicKey(getAdminWalletAddress());
       const feeAmount = 0.1 * LAMPORTS_PER_SOL; // 0.1 SOL in lamports
 
       // Check if sender has sufficient balance
@@ -198,11 +198,11 @@ export const processFee = api<ProcessFeeRequest, ProcessFeeResponse>(
           // Verify the transfer amount and recipient
           const preBalances = txDetails.meta.preBalances || [];
           const postBalances = txDetails.meta.postBalances || [];
-          const accountKeys = txDetails.transaction.message.accountKeys;
+          const accountKeys = (txDetails.transaction.message as any).accountKeys;
           
           // Check if admin wallet received the expected amount
-          const adminWallet = adminWalletAddress();
-          const adminIndex = accountKeys.findIndex(key => key.toString() === adminWallet);
+          const adminWallet = getAdminWalletAddress();
+          const adminIndex = accountKeys.findIndex((key: any) => key.toString() === adminWallet);
           
           if (adminIndex >= 0 && adminIndex < preBalances.length && adminIndex < postBalances.length) {
             const balanceIncrease = postBalances[adminIndex] - preBalances[adminIndex];

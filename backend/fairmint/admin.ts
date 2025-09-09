@@ -1,9 +1,7 @@
 import { api, APIError } from "encore.dev/api";
-import { secret } from "encore.dev/config";
 import { fairMintDB } from "./db";
 import type { FairMintEvent, AcceptedToken } from "./event";
-
-const adminWalletAddress = secret("AdminWalletAddress");
+import { getAdminWallet as getAdminWalletAddress } from "../config";
 
 interface AcceptedTokenRequest {
   mintAddress: string;
@@ -45,13 +43,8 @@ interface GetAdminWalletResponse {
 export const getAdminWallet = api<void, GetAdminWalletResponse>(
   { expose: true, method: "GET", path: "/fair-mint/admin/wallet" },
   async () => {
-    try {
-      const wallet = adminWalletAddress();
-      return { adminWallet: wallet };
-    } catch (error) {
-      console.error("Failed to get admin wallet secret:", error);
-      throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
-    }
+    const wallet = getAdminWalletAddress();
+    return { adminWallet: wallet };
   }
 );
 
@@ -61,13 +54,7 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
   async (req) => {
     try {
       // 1. Authenticate admin
-      let expectedAdminWallet: string;
-      try {
-        expectedAdminWallet = adminWalletAddress();
-      } catch (e) {
-        console.error("Admin wallet secret not set:", e);
-        throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
-      }
+      const expectedAdminWallet = getAdminWalletAddress();
 
       if (req.adminWallet !== expectedAdminWallet) {
         console.warn(`Unauthorized admin access attempt from: ${req.adminWallet}`);
@@ -268,13 +255,7 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
 export const pauseEvent = api<{ adminWallet: string; eventId: number; reason?: string }, { success: boolean }>(
   { expose: true, method: "POST", path: "/fair-mint/admin/pause" },
   async (req) => {
-    let expectedAdminWallet: string;
-    try {
-      expectedAdminWallet = adminWalletAddress();
-    } catch (e) {
-      console.error("Admin wallet secret not set:", e);
-      throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
-    }
+    const expectedAdminWallet = getAdminWalletAddress();
 
     if (req.adminWallet !== expectedAdminWallet) {
       throw APIError.permissionDenied("You are not authorized to pause events.");
@@ -300,13 +281,7 @@ export const pauseEvent = api<{ adminWallet: string; eventId: number; reason?: s
 export const resumeEvent = api<{ adminWallet: string; eventId: number; reason?: string }, { success: boolean }>(
   { expose: true, method: "POST", path: "/fair-mint/admin/resume" },
   async (req) => {
-    let expectedAdminWallet: string;
-    try {
-      expectedAdminWallet = adminWalletAddress();
-    } catch (e) {
-      console.error("Admin wallet secret not set:", e);
-      throw APIError.internal("Admin wallet secret is not configured. Please set it in the infrastructure settings.");
-    }
+    const expectedAdminWallet = getAdminWalletAddress();
 
     if (req.adminWallet !== expectedAdminWallet) {
       throw APIError.permissionDenied("You are not authorized to resume events.");
