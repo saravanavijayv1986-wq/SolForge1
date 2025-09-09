@@ -13,6 +13,8 @@ import {
   createMintToInstruction,
   createSetAuthorityInstruction,
   AuthorityType,
+  getAccount,
+  TokenAccountNotFoundError,
 } from "@solana/spl-token";
 
 export type CreateTokenArgs = {
@@ -54,9 +56,18 @@ export function useTokenService() {
         const ata = await getAssociatedTokenAddress(mintKeypair.publicKey, publicKey);
         ataAddress = ata.toBase58();
 
-        transaction.add(
-          createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, mintKeypair.publicKey)
-        );
+        try {
+          await getAccount(connection, ata);
+        } catch (error: unknown) {
+          if (error instanceof TokenAccountNotFoundError) {
+            // If it does not exist, add instruction to create it
+            transaction.add(
+              createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, mintKeypair.publicKey)
+            );
+          } else {
+            throw error;
+          }
+        }
 
         const rawAmount = BigInt(Math.round(initialSupply * 10 ** decimals));
         transaction.add(
@@ -79,7 +90,7 @@ export function useTokenService() {
         signers: [mintKeypair],
       });
 
-      await connection.confirmTransaction(signature, "confirmed");
+      await connection.confirmTransaction({ signature, ...(await connection.getLatestBlockhash()) }, "confirmed");
 
       return {
         mint: mintKeypair.publicKey.toBase58(),

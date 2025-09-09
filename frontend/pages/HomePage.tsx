@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Zap, Shield, Globe, Code, DollarSign, Users, CheckCircle, Rocket, Coins, Target } from 'lucide-react';
-import { useWallet } from '../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { APP_CONFIG, TOKEN_CREATION_FEE, NETWORK_CONFIG } from '../config';
 
 export function HomePage() {
@@ -84,7 +84,7 @@ export function HomePage() {
             {connected ? (
               <>
                 <Button asChild variant="outline" size="lg" className="text-lg px-8">
-                  <Link to="/create">Create Token ({TOKEN_CREATION_FEE} SOL)</Link>
+                  <Link to="/create">Create Token</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="text-lg px-8">
                   <Link to="/dashboard">View Dashboard</Link>

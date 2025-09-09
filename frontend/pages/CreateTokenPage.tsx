@@ -17,8 +17,8 @@ import { WalletConnectPrompt } from "../components/wallet/WalletConnectPrompt";
 import { NETWORK_CONFIG } from "../config";
 
 const createTokenSchema = z.object({
-  name: z.string().min(1, "Token name is required"),
-  symbol: z.string().min(1, "Token symbol is required"),
+  name: z.string().min(1, "Token name is required"), // Not used by the service, but good for UX
+  symbol: z.string().min(1, "Token symbol is required"), // Not used by the service
   decimals: z.number().min(0, "Must be at least 0").max(9, "Must be 9 or less"),
   initialSupply: z.string().refine(val => !val || !isNaN(parseFloat(val)), {
     message: "Must be a valid number",
