@@ -533,12 +533,27 @@ export const enhancedEmergencyPause = api<EmergencyPauseAction, { success: boole
   }
 );
 
+export interface Anomaly {
+  type: string;
+  severity: string;
+  description: string;
+  value: number;
+  expectedRange: {
+    min: number;
+    max: number;
+  };
+}
+
+export interface DetectAnomaliesResponse {
+  anomalies: Anomaly[];
+}
+
 // Real-time anomaly detection
-export const detectAnomalies = api<{ eventId: number; timeWindow?: number }, { anomalies: Array<{ type: string; severity: string; description: string; value: number; expectedRange: [number, number] }> }>(
+export const detectAnomalies = api<{ eventId: number; timeWindow?: number }, DetectAnomaliesResponse>(
   { expose: true, method: "GET", path: "/fair-mint/safety/detect-anomalies" },
   async (req) => {
     const timeWindow = req.timeWindow || 60; // minutes
-    const anomalies: Array<{ type: string; severity: string; description: string; value: number; expectedRange: [number, number] }> = [];
+    const anomalies: Anomaly[] = [];
 
     // Detect burn rate anomalies
     const burnRateData = await fairMintDB.queryAll<{
@@ -572,7 +587,7 @@ export const detectAnomalies = api<{ eventId: number; timeWindow?: number }, { a
           severity: 'warning',
           description: 'Unusual spike in burn transaction rate',
           value: currentBurnRate,
-          expectedRange: [0, avgBurnsPerHour * 2]
+          expectedRange: { min: 0, max: avgBurnsPerHour * 2 }
         });
       }
       
@@ -583,7 +598,7 @@ export const detectAnomalies = api<{ eventId: number; timeWindow?: number }, { a
           severity: 'critical',
           description: 'Extreme spike in USD burn value',
           value: currentUsdRate,
-          expectedRange: [0, avgUsdPerHour * 2]
+          expectedRange: { min: 0, max: avgUsdPerHour * 2 }
         });
       }
     }

@@ -121,10 +121,21 @@ import {
     validateQuote as api_fairmint_quote_validateQuote
 } from "~backend/fairmint/quote";
 import {
+    getRealTimeBurnStream as api_fairmint_realtime_dashboard_getRealTimeBurnStream,
+    getRealtimeDashboard as api_fairmint_realtime_dashboard_getRealtimeDashboard,
+    getRealtimeLeaderboard as api_fairmint_realtime_dashboard_getRealtimeLeaderboard,
+    getRealtimeTokenPrices as api_fairmint_realtime_dashboard_getRealtimeTokenPrices
+} from "~backend/fairmint/realtime-dashboard";
+import {
     emergencyAction as api_fairmint_safety_emergencyAction,
     performSafetyCheck as api_fairmint_safety_performSafetyCheck,
     resetDailyCaps as api_fairmint_safety_resetDailyCaps
 } from "~backend/fairmint/safety";
+import {
+    detectAnomalies as api_fairmint_safety_enhanced_detectAnomalies,
+    enhancedEmergencyPause as api_fairmint_safety_enhanced_enhancedEmergencyPause,
+    performEnhancedSafetyCheck as api_fairmint_safety_enhanced_performEnhancedSafetyCheck
+} from "~backend/fairmint/safety-enhanced";
 import {
     claimTokens as api_fairmint_vesting_claimTokens,
     createVestingSchedules as api_fairmint_vesting_createVestingSchedules,
@@ -132,6 +143,13 @@ import {
     getEventVestingSchedules as api_fairmint_vesting_getEventVestingSchedules,
     getVestingSchedule as api_fairmint_vesting_getVestingSchedule
 } from "~backend/fairmint/vesting";
+import {
+    createDetailedVestingSchedules as api_fairmint_vesting_enhanced_createDetailedVestingSchedules,
+    enhancedClaimTokens as api_fairmint_vesting_enhanced_enhancedClaimTokens,
+    getDetailedClaimableAmount as api_fairmint_vesting_enhanced_getDetailedClaimableAmount,
+    getVestingEventSummary as api_fairmint_vesting_enhanced_getVestingEventSummary,
+    processBulkClaims as api_fairmint_vesting_enhanced_processBulkClaims
+} from "~backend/fairmint/vesting-enhanced";
 
 export namespace fairmint {
 
@@ -143,24 +161,36 @@ export namespace fairmint {
             this.burnTokens = this.burnTokens.bind(this)
             this.claimTokens = this.claimTokens.bind(this)
             this.createBurnTransaction = this.createBurnTransaction.bind(this)
+            this.createDetailedVestingSchedules = this.createDetailedVestingSchedules.bind(this)
             this.createEvent = this.createEvent.bind(this)
             this.createVestingSchedules = this.createVestingSchedules.bind(this)
+            this.detectAnomalies = this.detectAnomalies.bind(this)
             this.emergencyAction = this.emergencyAction.bind(this)
+            this.enhancedClaimTokens = this.enhancedClaimTokens.bind(this)
+            this.enhancedEmergencyPause = this.enhancedEmergencyPause.bind(this)
             this.getActiveEvent = this.getActiveEvent.bind(this)
             this.getAdminWallet = this.getAdminWallet.bind(this)
             this.getBatchPrices = this.getBatchPrices.bind(this)
             this.getClaimableAmount = this.getClaimableAmount.bind(this)
+            this.getDetailedClaimableAmount = this.getDetailedClaimableAmount.bind(this)
             this.getEventStats = this.getEventStats.bind(this)
             this.getEventVestingSchedules = this.getEventVestingSchedules.bind(this)
             this.getLeaderboard = this.getLeaderboard.bind(this)
             this.getQuote = this.getQuote.bind(this)
             this.getRaydiumPrice = this.getRaydiumPrice.bind(this)
+            this.getRealTimeBurnStream = this.getRealTimeBurnStream.bind(this)
+            this.getRealtimeDashboard = this.getRealtimeDashboard.bind(this)
+            this.getRealtimeLeaderboard = this.getRealtimeLeaderboard.bind(this)
+            this.getRealtimeTokenPrices = this.getRealtimeTokenPrices.bind(this)
             this.getTokenLeaderboard = this.getTokenLeaderboard.bind(this)
             this.getUserBurns = this.getUserBurns.bind(this)
+            this.getVestingEventSummary = this.getVestingEventSummary.bind(this)
             this.getVestingSchedule = this.getVestingSchedule.bind(this)
             this.healthCheck = this.healthCheck.bind(this)
             this.pauseEvent = this.pauseEvent.bind(this)
+            this.performEnhancedSafetyCheck = this.performEnhancedSafetyCheck.bind(this)
             this.performSafetyCheck = this.performSafetyCheck.bind(this)
+            this.processBulkClaims = this.processBulkClaims.bind(this)
             this.resetDailyCaps = this.resetDailyCaps.bind(this)
             this.resumeEvent = this.resumeEvent.bind(this)
             this.validateQuote = this.validateQuote.bind(this)
@@ -194,6 +224,15 @@ export namespace fairmint {
         }
 
         /**
+         * Enhanced vesting schedule creation with detailed calculations
+         */
+        public async createDetailedVestingSchedules(params: RequestType<typeof api_fairmint_vesting_enhanced_createDetailedVestingSchedules>): Promise<ResponseType<typeof api_fairmint_vesting_enhanced_createDetailedVestingSchedules>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/vesting/create-detailed-schedules`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_vesting_enhanced_createDetailedVestingSchedules>
+        }
+
+        /**
          * Creates a new fair mint event (admin only)
          */
         public async createEvent(params: RequestType<typeof api_fairmint_admin_createEvent>): Promise<ResponseType<typeof api_fairmint_admin_createEvent>> {
@@ -212,12 +251,45 @@ export namespace fairmint {
         }
 
         /**
+         * Real-time anomaly detection
+         */
+        public async detectAnomalies(params: RequestType<typeof api_fairmint_safety_enhanced_detectAnomalies>): Promise<ResponseType<typeof api_fairmint_safety_enhanced_detectAnomalies>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventId:    String(params.eventId),
+                timeWindow: params.timeWindow === undefined ? undefined : String(params.timeWindow),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/safety/detect-anomalies`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_safety_enhanced_detectAnomalies>
+        }
+
+        /**
          * Emergency action endpoint for admins
          */
         public async emergencyAction(params: RequestType<typeof api_fairmint_safety_emergencyAction>): Promise<ResponseType<typeof api_fairmint_safety_emergencyAction>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/fair-mint/safety/emergency`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_safety_emergencyAction>
+        }
+
+        /**
+         * Enhanced claim with partial claiming and better error handling
+         */
+        public async enhancedClaimTokens(params: RequestType<typeof api_fairmint_vesting_enhanced_enhancedClaimTokens>): Promise<ResponseType<typeof api_fairmint_vesting_enhanced_enhancedClaimTokens>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/vesting/enhanced-claim`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_vesting_enhanced_enhancedClaimTokens>
+        }
+
+        /**
+         * Enhanced emergency pause with multiple pause types
+         */
+        public async enhancedEmergencyPause(params: RequestType<typeof api_fairmint_safety_enhanced_enhancedEmergencyPause>): Promise<ResponseType<typeof api_fairmint_safety_enhanced_enhancedEmergencyPause>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/safety/enhanced-pause`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_safety_enhanced_enhancedEmergencyPause>
         }
 
         /**
@@ -259,6 +331,20 @@ export namespace fairmint {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/fair-mint/vesting/claimable/${encodeURIComponent(params.userWallet)}`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_vesting_getClaimableAmount>
+        }
+
+        /**
+         * Enhanced claimable amount calculation with detailed breakdown
+         */
+        public async getDetailedClaimableAmount(params: RequestType<typeof api_fairmint_vesting_enhanced_getDetailedClaimableAmount>): Promise<ResponseType<typeof api_fairmint_vesting_enhanced_getDetailedClaimableAmount>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventId: String(params.eventId),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/vesting/detailed-claimable/${encodeURIComponent(params.userWallet)}`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_vesting_enhanced_getDetailedClaimableAmount>
         }
 
         /**
@@ -319,6 +405,68 @@ export namespace fairmint {
         }
 
         /**
+         * Real-time burn stream with filtering
+         */
+        public async getRealTimeBurnStream(params: RequestType<typeof api_fairmint_realtime_dashboard_getRealTimeBurnStream>): Promise<ResponseType<typeof api_fairmint_realtime_dashboard_getRealTimeBurnStream>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventId:     params.eventId === undefined ? undefined : String(params.eventId),
+                limit:       params.limit === undefined ? undefined : String(params.limit),
+                minUsdValue: params.minUsdValue,
+                timeWindow:  params.timeWindow === undefined ? undefined : String(params.timeWindow),
+                tokenSymbol: params.tokenSymbol,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/realtime/burn-stream`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_realtime_dashboard_getRealTimeBurnStream>
+        }
+
+        /**
+         * Real-time comprehensive dashboard data
+         */
+        public async getRealtimeDashboard(params: RequestType<typeof api_fairmint_realtime_dashboard_getRealtimeDashboard>): Promise<ResponseType<typeof api_fairmint_realtime_dashboard_getRealtimeDashboard>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventId:        params.eventId === undefined ? undefined : String(params.eventId),
+                includeHistory: params.includeHistory === undefined ? undefined : String(params.includeHistory),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/realtime/dashboard`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_realtime_dashboard_getRealtimeDashboard>
+        }
+
+        /**
+         * Enhanced real-time leaderboard with analytics
+         */
+        public async getRealtimeLeaderboard(params: RequestType<typeof api_fairmint_realtime_dashboard_getRealtimeLeaderboard>): Promise<ResponseType<typeof api_fairmint_realtime_dashboard_getRealtimeLeaderboard>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventId: params.eventId === undefined ? undefined : String(params.eventId),
+                topN:    params.topN === undefined ? undefined : String(params.topN),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/realtime/leaderboard`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_realtime_dashboard_getRealtimeLeaderboard>
+        }
+
+        /**
+         * Get real-time price data for accepted tokens
+         */
+        public async getRealtimeTokenPrices(params: RequestType<typeof api_fairmint_realtime_dashboard_getRealtimeTokenPrices>): Promise<ResponseType<typeof api_fairmint_realtime_dashboard_getRealtimeTokenPrices>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventId: params.eventId === undefined ? undefined : String(params.eventId),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/realtime/token-prices`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_realtime_dashboard_getRealtimeTokenPrices>
+        }
+
+        /**
          * Gets the token leaderboard showing burn statistics by token
          */
         public async getTokenLeaderboard(params: RequestType<typeof api_fairmint_leaderboard_getTokenLeaderboard>): Promise<ResponseType<typeof api_fairmint_leaderboard_getTokenLeaderboard>> {
@@ -344,6 +492,15 @@ export namespace fairmint {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/fair-mint/burns/${encodeURIComponent(params.userWallet)}`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_burn_getUserBurns>
+        }
+
+        /**
+         * Get comprehensive vesting event summary for admin dashboard
+         */
+        public async getVestingEventSummary(params: { eventId: number }): Promise<ResponseType<typeof api_fairmint_vesting_enhanced_getVestingEventSummary>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/vesting/event-summary/${encodeURIComponent(params.eventId)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_vesting_enhanced_getVestingEventSummary>
         }
 
         /**
@@ -379,6 +536,20 @@ export namespace fairmint {
         }
 
         /**
+         * Comprehensive safety monitoring with enhanced algorithms
+         */
+        public async performEnhancedSafetyCheck(params: RequestType<typeof api_fairmint_safety_enhanced_performEnhancedSafetyCheck>): Promise<ResponseType<typeof api_fairmint_safety_enhanced_performEnhancedSafetyCheck>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventId: params.eventId === undefined ? undefined : String(params.eventId),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/safety/enhanced-check`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_safety_enhanced_performEnhancedSafetyCheck>
+        }
+
+        /**
          * Comprehensive safety monitoring for fair mint events
          */
         public async performSafetyCheck(params: RequestType<typeof api_fairmint_safety_performSafetyCheck>): Promise<ResponseType<typeof api_fairmint_safety_performSafetyCheck>> {
@@ -390,6 +561,15 @@ export namespace fairmint {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/fair-mint/safety/check`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_safety_performSafetyCheck>
+        }
+
+        /**
+         * Bulk claim processing for admin (emergency function)
+         */
+        public async processBulkClaims(params: RequestType<typeof api_fairmint_vesting_enhanced_processBulkClaims>): Promise<ResponseType<typeof api_fairmint_vesting_enhanced_processBulkClaims>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/fair-mint/vesting/bulk-claim`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_vesting_enhanced_processBulkClaims>
         }
 
         /**
@@ -480,6 +660,12 @@ export namespace health {
  * Import the endpoint handlers to derive the types for the client.
  */
 import { getPrice as api_price_get_getPrice } from "~backend/price/get";
+import {
+    clearPriceCache as api_price_raydium_only_clearPriceCache,
+    getBatchRaydiumPrices as api_price_raydium_only_getBatchRaydiumPrices,
+    getRaydiumOnlyPrice as api_price_raydium_only_getRaydiumOnlyPrice,
+    raydiumHealthCheck as api_price_raydium_only_raydiumHealthCheck
+} from "~backend/price/raydium-only";
 
 export namespace price {
 
@@ -488,7 +674,29 @@ export namespace price {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.clearPriceCache = this.clearPriceCache.bind(this)
+            this.getBatchRaydiumPrices = this.getBatchRaydiumPrices.bind(this)
             this.getPrice = this.getPrice.bind(this)
+            this.getRaydiumOnlyPrice = this.getRaydiumOnlyPrice.bind(this)
+            this.raydiumHealthCheck = this.raydiumHealthCheck.bind(this)
+        }
+
+        /**
+         * Clear pricing cache
+         */
+        public async clearPriceCache(): Promise<ResponseType<typeof api_price_raydium_only_clearPriceCache>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/clear-cache`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_clearPriceCache>
+        }
+
+        /**
+         * Batch price fetching for multiple tokens
+         */
+        public async getBatchRaydiumPrices(params: RequestType<typeof api_price_raydium_only_getBatchRaydiumPrices>): Promise<ResponseType<typeof api_price_raydium_only_getBatchRaydiumPrices>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/batch`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_getBatchRaydiumPrices>
         }
 
         /**
@@ -498,6 +706,24 @@ export namespace price {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/price/${encodeURIComponent(params.mint)}`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_get_getPrice>
+        }
+
+        /**
+         * Gets price data exclusively from Raydium with comprehensive error handling
+         */
+        public async getRaydiumOnlyPrice(params: { mint: string }): Promise<ResponseType<typeof api_price_raydium_only_getRaydiumOnlyPrice>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/${encodeURIComponent(params.mint)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_getRaydiumOnlyPrice>
+        }
+
+        /**
+         * Health check endpoint for Raydium-only pricing
+         */
+        public async raydiumHealthCheck(): Promise<ResponseType<typeof api_price_raydium_only_raydiumHealthCheck>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/health`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_raydiumHealthCheck>
         }
     }
 }
