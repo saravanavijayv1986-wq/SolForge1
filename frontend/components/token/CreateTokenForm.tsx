@@ -51,8 +51,7 @@ export function CreateTokenForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [payingFee, setPayingFee] = useState(false);
-  const [uploadingMetadata, setUploadingMetadata] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const {
     register,
@@ -103,72 +102,50 @@ export function CreateTokenForm() {
     }
 
     setIsSubmitting(true);
-    setPayingFee(true);
 
     try {
-      // Step 1: Create fee transaction
-      const feeTransactionResponse = await backend.wallet.createFeeTransaction({
-        fromAddress: publicKey.toString(),
+      // Step 1: Prepare transaction on backend
+      setStatusMessage('Preparing transaction...');
+      const prepareResponse = await backend.token.actions.prepareTokenCreation({
+        ...data,
+        supply: data.supply.trim(),
+        creatorWallet: publicKey.toString(),
       });
 
-      // Step 2: Get user to sign the fee transaction
-      const feeTransaction = Transaction.from(Buffer.from(feeTransactionResponse.transaction, 'base64'));
-      const signedFeeTransaction = await wallet.signTransaction(feeTransaction);
+      // Step 2: Sign transaction on frontend
+      setStatusMessage('Please sign the transaction in your wallet...');
+      const transaction = Transaction.from(Buffer.from(prepareResponse.transaction, 'base64'));
+      const signedTransaction = await wallet.signTransaction(transaction);
 
-      // Step 3: Process the fee payment
-      const feePaymentResponse = await backend.wallet.processFee({
-        fromAddress: publicKey.toString(),
-        signedTransaction: signedFeeTransaction.serialize().toString('base64'),
-      });
-
-      if (!feePaymentResponse.success) {
-        throw new Error("Fee payment failed");
-      }
-
-      setPayingFee(false);
-      setUploadingMetadata(true);
-
-      toast({
-        title: "Fee Payment Successful",
-        description: `Paid ${TOKEN_CREATION_FEE} SOL creation fee. Uploading metadata to Arweave...`,
-      });
-
-      // Step 4: Create the token with fee proof and metadata upload
+      // Step 3: Convert logo to base64 if it exists
       let logoFileBase64: string | undefined;
       if (logoFile) {
         logoFileBase64 = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
+          reader.onload = () => resolve((reader.result as string).split(',')[1]); // Get only base64 part
           reader.onerror = () => reject(new Error('Failed to read logo file'));
           reader.readAsDataURL(logoFile);
         });
       }
 
-      const response = await backend.token.create({
+      // Step 4: Finalize on backend
+      setStatusMessage('Finalizing token creation on-chain...');
+      const finalizeResponse = await backend.token.actions.finalizeTokenCreation({
         ...data,
         name: data.name.trim(),
         symbol: data.symbol.trim().toUpperCase(),
         supply: data.supply.trim(),
         description: data.description?.trim(),
-        logoFile: logoFileBase64,
         creatorWallet: publicKey.toString(),
-        feeTransactionSignature: feePaymentResponse.transactionSignature,
+        mintAddress: prepareResponse.mintAddress,
+        signedTransaction: signedTransaction.serialize().toString('base64'),
+        logoFile: logoFileBase64,
       });
-
-      setUploadingMetadata(false);
 
       toast({
         title: "Token Created Successfully!",
-        description: `Your token ${data.symbol.toUpperCase()} has been deployed to ${NETWORK_CONFIG.displayName} with metadata stored on Arweave.`,
+        description: `Your token ${data.symbol.toUpperCase()} has been deployed to ${NETWORK_CONFIG.displayName}.`,
       });
-
-      // Show metadata URLs if available
-      if (response.metadataUrl) {
-        toast({
-          title: "Metadata Uploaded",
-          description: "Token metadata has been permanently stored on Arweave.",
-        });
-      }
 
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (error) {
@@ -184,8 +161,7 @@ export function CreateTokenForm() {
       });
     } finally {
       setIsSubmitting(false);
-      setPayingFee(false);
-      setUploadingMetadata(false);
+      setStatusMessage('');
     }
   };
 
@@ -322,8 +298,7 @@ export function CreateTokenForm() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {payingFee ? `Paying ${TOKEN_CREATION_FEE} SOL Fee...` : 
-                     uploadingMetadata ? 'Uploading to Arweave...' : 'Creating Token...'}
+                    {statusMessage || 'Processing...'}
                   </>
                 ) : (
                   `Create Token (${TOKEN_CREATION_FEE} SOL)`
