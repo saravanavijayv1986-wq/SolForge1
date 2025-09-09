@@ -14,6 +14,7 @@ const treasurySigner = secret("TreasurySigner");
 const SOLF_PER_SOL = 10000;
 const FEE_AMOUNT_SOL = 0.1;
 const LAMPORTS_PER_SOL = 1000000000;
+const MIN_PURCHASE_SOL = 0.2;
 
 export interface BuySOLFRequest {
   wallet: string;
@@ -116,8 +117,8 @@ export const buy = api<BuySOLFRequest, BuySOLFResponse>(
       }
 
       // Validate transfer amounts
-      if (treasuryTransfer < 1.0) {
-        throw APIError.failedPrecondition(`Invalid treasury transfer amount: ${treasuryTransfer} SOL. Expected at least 1 SOL.`);
+      if (treasuryTransfer < MIN_PURCHASE_SOL) {
+        throw APIError.failedPrecondition(`Invalid treasury transfer amount: ${treasuryTransfer} SOL. Expected at least ${MIN_PURCHASE_SOL} SOL.`);
       }
 
       if (teamTransfer < FEE_AMOUNT_SOL) {

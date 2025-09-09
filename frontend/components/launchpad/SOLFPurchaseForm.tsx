@@ -17,8 +17,8 @@ import backend from '~backend/client';
 const purchaseSchema = z.object({
   solAmount: z.string().refine((val) => {
     const num = parseFloat(val);
-    return !isNaN(num) && num >= 1 && num <= 1000;
-  }, 'SOL amount must be between 1 and 1000'),
+    return !isNaN(num) && num >= 0.2 && num <= 1000;
+  }, 'SOL amount must be between 0.2 and 1000'),
 });
 
 type PurchaseFormData = z.infer<typeof purchaseSchema>;
@@ -53,7 +53,7 @@ export function SOLFPurchaseForm() {
   } = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
-      solAmount: '1',
+      solAmount: '0.2',
     },
   });
 
@@ -271,9 +271,9 @@ export function SOLFPurchaseForm() {
               <Input
                 id="solAmount"
                 type="number"
-                placeholder="1"
+                placeholder="0.2"
                 step="0.1"
-                min="1"
+                min="0.2"
                 max="1000"
                 {...register('solAmount')}
                 className={errors.solAmount ? 'border-destructive' : ''}
@@ -298,7 +298,7 @@ export function SOLFPurchaseForm() {
             <div className="bg-muted rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">SOL for SOLF:</span>
-                <span className="font-medium">{solAmount.toFixed(1)} SOL</span>
+                <span className="font-medium">{solAmount.toFixed(2)} SOL</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Platform Fee:</span>
@@ -306,7 +306,7 @@ export function SOLFPurchaseForm() {
               </div>
               <div className="border-t pt-2 flex justify-between">
                 <span className="font-medium">Total Cost:</span>
-                <span className="font-bold">{totalCost.toFixed(1)} SOL</span>
+                <span className="font-bold">{totalCost.toFixed(2)} SOL</span>
               </div>
               <div className="border-t pt-2 flex justify-between">
                 <span className="font-medium">You Will Receive:</span>
@@ -322,7 +322,7 @@ export function SOLFPurchaseForm() {
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <h4 className="font-semibold mb-1">How it works:</h4>
                 <ul className="space-y-1 text-xs">
-                  <li>• Your payment is split: {solAmount.toFixed(1)} SOL to Treasury, {FEE_AMOUNT} SOL to Team</li>
+                  <li>• Your payment is split: {solAmount.toFixed(2)} SOL to Treasury, {FEE_AMOUNT} SOL to Team</li>
                   <li>• SOLF tokens are automatically transferred from Treasury wallet</li>
                   <li>• Transaction is final and irreversible</li>
                   <li>• Launchpad stops when Treasury allocation is depleted</li>
@@ -334,7 +334,7 @@ export function SOLFPurchaseForm() {
 
           <Button
             type="submit"
-            disabled={isSubmitting || solAmount < 1}
+            disabled={isSubmitting || solAmount < 0.2}
             className="w-full"
             size="lg"
           >
@@ -346,7 +346,7 @@ export function SOLFPurchaseForm() {
               </>
             ) : (
               <>
-                <span>Buy {solfAmount.toLocaleString()} SOLF for {totalCost.toFixed(1)} SOL</span>
+                <span>Buy {solfAmount.toLocaleString()} SOLF for {totalCost.toFixed(2)} SOL</span>
                 <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}
