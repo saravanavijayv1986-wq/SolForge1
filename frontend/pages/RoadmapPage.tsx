@@ -53,22 +53,6 @@ const roadmapPhases: RoadmapPhase[] = [
   },
   {
     id: 2,
-    title: 'Proof-of-Burn Fair Mint',
-    status: 'completed',
-    description: 'Revolutionary fair distribution mechanism via SPL token burning',
-    icon: Flame,
-    quarter: 'Q4 2024',
-    features: [
-      'True SPL token burns (not transfers) with on-chain verification',
-      'Pro-rata SOLF allocation based on USD value at burn time',
-      'Real-time pricing via Pyth oracles with DEX fallbacks',
-      '90-second quote TTL with comprehensive safety caps',
-      'Admin dashboard for curating accepted tokens',
-      'Leaderboards, statistics, and user burn history'
-    ]
-  },
-  {
-    id: 3,
     title: 'SOLF Staking & Rewards',
     status: 'in-progress',
     description: 'Native token staking with rewards and governance participation',
@@ -83,7 +67,7 @@ const roadmapPhases: RoadmapPhase[] = [
     ]
   },
   {
-    id: 4,
+    id: 3,
     title: 'DEX Integration & Trading',
     status: 'upcoming',
     description: 'Seamless token swapping with integrated liquidity',
@@ -98,7 +82,7 @@ const roadmapPhases: RoadmapPhase[] = [
     ]
   },
   {
-    id: 5,
+    id: 4,
     title: 'Launchpad & IDO Platform',
     status: 'upcoming',
     description: 'Token launchpad for vetted projects with SOLF staking requirements',
@@ -113,7 +97,7 @@ const roadmapPhases: RoadmapPhase[] = [
     ]
   },
   {
-    id: 6,
+    id: 5,
     title: 'Advanced Analytics & Tools',
     status: 'upcoming',
     description: 'Professional-grade analytics and portfolio management',
@@ -128,7 +112,7 @@ const roadmapPhases: RoadmapPhase[] = [
     ]
   },
   {
-    id: 7,
+    id: 6,
     title: 'Governance & DAO',
     status: 'upcoming',
     description: 'Community governance and decentralized decision making',
@@ -143,7 +127,7 @@ const roadmapPhases: RoadmapPhase[] = [
     ]
   },
   {
-    id: 8,
+    id: 7,
     title: 'Cross-Chain & Ecosystem',
     status: 'upcoming',
     description: 'Multi-chain expansion and ecosystem partnerships',
@@ -169,11 +153,6 @@ const currentFeatures = [
     icon: Globe,
     title: 'Mainnet Ready',
     description: `Live on ${NETWORK_CONFIG.displayName}`
-  },
-  {
-    icon: Flame,
-    title: 'Fair Mint Live',
-    description: 'Proof-of-Burn distribution system'
   },
   {
     icon: Shield,
@@ -509,10 +488,10 @@ export function RoadmapPage() {
               Create Your First Token
             </a>
             <a 
-              href="/fair-mint" 
+              href="/dashboard" 
               className="border border-white text-white font-medium px-6 py-3 rounded-lg hover:bg-white/10 transition-colors"
             >
-              Join Fair Mint
+              View Dashboard
             </a>
           </div>
         </div>

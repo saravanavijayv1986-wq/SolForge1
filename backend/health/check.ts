@@ -1,5 +1,4 @@
 import { api } from "encore.dev/api";
-import { fairMintDB } from "../fairmint/db";
 import { tokenDB } from "../token/db";
 import { Connection } from "@solana/web3.js";
 import { secret } from "encore.dev/config";
@@ -23,7 +22,6 @@ export interface HealthStatus {
 
 export interface DetailedHealthCheck {
   database: {
-    fairMint: boolean;
     token: boolean;
     latency: number;
   };
@@ -35,11 +33,6 @@ export interface DetailedHealthCheck {
   pricing: {
     raydiumApiHealthy: boolean;
     latency: number;
-  };
-  fairMint: {
-    activeEvents: number;
-    recentBurns: number;
-    healthyTokens: number;
   };
 }
 
@@ -53,7 +46,6 @@ export const healthCheck = api<void, HealthStatus>(
     // Check database connectivity
     try {
       const dbStart = Date.now();
-      await fairMintDB.queryRow`SELECT 1 as test`;
       await tokenDB.queryRow`SELECT 1 as test`;
       services.database = {
         status: 'healthy',
@@ -80,24 +72,6 @@ export const healthCheck = api<void, HealthStatus>(
       services.solana = {
         status: 'unhealthy',
         error: error instanceof Error ? error.message : 'Solana RPC connection failed'
-      };
-    }
-
-    // Check Fair Mint service
-    try {
-      const fairMintStart = Date.now();
-      const activeEvents = await fairMintDB.queryRow<{ count: number }>`
-        SELECT COUNT(*) as count FROM fair_mint_events WHERE is_active = true
-      `;
-      services.fairMint = {
-        status: 'healthy',
-        latency: Date.now() - fairMintStart,
-        details: { activeEvents: activeEvents?.count || 0 }
-      };
-    } catch (error) {
-      services.fairMint = {
-        status: 'degraded',
-        error: error instanceof Error ? error.message : 'Fair mint check failed'
       };
     }
 
@@ -132,19 +106,14 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
     try {
       const dbStart = Date.now();
       
-      const [fairMintTest, tokenTest] = await Promise.all([
-        fairMintDB.queryRow`SELECT 1 as test`,
-        tokenDB.queryRow`SELECT 1 as test`
-      ]);
+      const tokenTest = await tokenDB.queryRow`SELECT 1 as test`;
       
       results.database = {
-        fairMint: !!fairMintTest,
         token: !!tokenTest,
         latency: Date.now() - dbStart
       };
     } catch (error) {
       results.database = {
-        fairMint: false,
         token: false,
         latency: -1
       };
@@ -195,36 +164,6 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
       };
     }
 
-    // Fair Mint specific health
-    try {
-      const [activeEvents, recentBurns, healthyTokens] = await Promise.all([
-        fairMintDB.queryRow<{ count: number }>`
-          SELECT COUNT(*) as count FROM fair_mint_events WHERE is_active = true
-        `,
-        fairMintDB.queryRow<{ count: number }>`
-          SELECT COUNT(*) as count FROM fair_mint_burns 
-          WHERE burn_timestamp >= NOW() - INTERVAL '1 hour'
-        `,
-        fairMintDB.queryRow<{ count: number }>`
-          SELECT COUNT(*) as count FROM fair_mint_accepted_tokens 
-          WHERE is_active = true 
-            AND current_daily_burned_usd < daily_cap_usd
-        `
-      ]);
-
-      results.fairMint = {
-        activeEvents: activeEvents?.count || 0,
-        recentBurns: recentBurns?.count || 0,
-        healthyTokens: healthyTokens?.count || 0
-      };
-    } catch (error) {
-      results.fairMint = {
-        activeEvents: -1,
-        recentBurns: -1,
-        healthyTokens: -1
-      };
-    }
-
     return results as DetailedHealthCheck;
   }
 );
@@ -236,16 +175,12 @@ export const databaseHealth = api<void, { healthy: boolean; latency: number; det
     const start = Date.now();
     
     try {
-      const [fairMintResult, tokenResult] = await Promise.all([
-        fairMintDB.queryRow`SELECT COUNT(*) as events FROM fair_mint_events`,
-        tokenDB.queryRow`SELECT COUNT(*) as tokens FROM tokens`
-      ]);
+      const tokenResult = await tokenDB.queryRow`SELECT COUNT(*) as tokens FROM tokens`;
 
       return {
         healthy: true,
         latency: Date.now() - start,
         details: {
-          fairMintEvents: fairMintResult?.events || 0,
           totalTokens: tokenResult?.tokens || 0
         }
       };

@@ -147,44 +147,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Fair Mint Announcement */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-orange-500 to-red-500">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            🔥 Proof-of-Burn Fair Mint Coming Soon
-          </h2>
-          <p className="text-xl text-orange-100 mb-8">
-            Burn your SPL tokens and receive SOLF pro-rata by USD value. No presale, no insiders - completely fair distribution.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white/10 backdrop-blur rounded-lg p-6">
-              <h3 className="font-semibold text-white mb-2">How It Works</h3>
-              <ul className="text-orange-100 text-sm space-y-1 text-left">
-                <li>• Burn approved SPL tokens (no LPs)</li>
-                <li>• Get SOLF based on USD value at burn time</li>
-                <li>• 20% TGE, 80% vested over 30 days</li>
-                <li>• True on-chain burns via SPL program</li>
-              </ul>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-lg p-6">
-              <h3 className="font-semibold text-white mb-2">Fair Launch Rules</h3>
-              <ul className="text-orange-100 text-sm space-y-1 text-left">
-                <li>• 72-hour burn window</li>
-                <li>• $2,500 max per transaction</li>
-                <li>• $5,000 max per wallet</li>
-                <li>• 90-second quote TTL</li>
-              </ul>
-            </div>
-          </div>
-          <Button asChild size="lg" variant="secondary" className="text-lg px-8">
-            <Link to="/fair-mint" className="flex items-center space-x-2">
-              <span>Learn More About Fair Mint</span>
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-
       {/* Pricing Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
         <div className="max-w-4xl mx-auto text-center">
