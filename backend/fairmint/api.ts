@@ -88,7 +88,7 @@ const CreateEventReqSchema = z.object({
     mintAddress: z.string().min(32),
     tokenName: z.string().min(1),
     tokenSymbol: z.string().min(1),
-    tokenLogoUrl: z.string().url().optional(),
+    tokenLogoUrl: z.string().url().optional().or(z.literal('')),
     dailyCapUsd: z.string().refine(isNumeric),
   })).min(1).max(20)
 });
