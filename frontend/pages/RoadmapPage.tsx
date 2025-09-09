@@ -374,43 +374,134 @@ export function RoadmapPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h4 className="font-semibold mb-3 flex items-center space-x-2">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  <span>Fair Distribution</span>
+                <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                  <Shield className="h-4 w-4 text-blue-500" />
+                  <span>Token Specifications</span>
                 </h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Proof-of-Burn fair mint (no presale)</li>
-                  <li>• Pro-rata allocation by USD burned</li>
-                  <li>• 20% TGE, 80% vested over 30 days</li>
-                  <li>• Transparent on-chain distribution</li>
-                </ul>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Token:</span>
+                    <span className="font-medium">SOLF (SPL)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Decimals:</span>
+                    <span className="font-medium">9</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Max Supply:</span>
+                    <span className="font-medium">500,000,000 SOLF</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Type:</span>
+                    <span className="font-medium">Capped mint (no inflation)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Mint Authority:</span>
+                    <span className="font-medium text-green-600">Revoked permanently</span>
+                  </div>
+                </div>
               </div>
               <div>
-                <h4 className="font-semibold mb-3 flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
-                  <span>Staking Benefits</span>
+                <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-purple-500" />
+                  <span>Distribution</span>
                 </h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Earn rewards for long-term staking</li>
-                  <li>• Multiple periods: 3, 6, 12 months</li>
-                  <li>• Governance voting power</li>
-                  <li>• Platform fee revenue sharing</li>
-                </ul>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Treasury (Launchpad):</span>
+                    <span className="font-medium">250M (50%)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Team & Operations:</span>
+                    <span className="font-medium">100M (20%)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Liquidity Pool:</span>
+                    <span className="font-medium">100M (20%)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Reserve/Partnerships:</span>
+                    <span className="font-medium">50M (10%)</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Current Launchpad Rate:</span>
+                    <span className="font-bold">10,000 SOLF per SOL</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Treasury Allocation Details */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                  <Wallet className="h-4 w-4 text-orange-500" />
+                  <span>Treasury Capacity</span>
+                </h4>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Available for Launchpad:</span>
+                    <span className="font-medium">250,000,000 SOLF</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">At 10,000 SOLF/SOL:</span>
+                    <span className="font-medium">25,000 SOL capacity</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Max USD Capacity (SOL@$100):</span>
+                    <span className="font-medium">$2,500,000</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Emission Schedule:</span>
+                    <span className="font-medium">Fixed rate until depleted</span>
+                  </div>
+                </div>
               </div>
               <div>
-                <h4 className="font-semibold mb-3 flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-green-500" />
-                  <span>Premium Access</span>
+                <h4 className="font-semibold mb-4 flex items-center space-x-2">
+                  <Target className="h-4 w-4 text-green-500" />
+                  <span>Utility & Benefits</span>
                 </h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Launchpad participation (≥10K SOLF)</li>
-                  <li>• Advanced analytics dashboard</li>
-                  <li>• Priority customer support</li>
-                  <li>• Early access to new features</li>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start space-x-2">
+                    <TrendingUp className="h-4 w-4 text-green-500 mt-0.5" />
+                    <span>Staking rewards (coming Q1 2025)</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Vote className="h-4 w-4 text-blue-500 mt-0.5" />
+                    <span>Governance voting rights</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Rocket className="h-4 w-4 text-purple-500 mt-0.5" />
+                    <span>IDO launchpad access (≥10K SOLF)</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <DollarSign className="h-4 w-4 text-orange-500 mt-0.5" />
+                    <span>Platform fee revenue sharing</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Shield className="h-4 w-4 text-red-500 mt-0.5" />
+                    <span>Premium features access</span>
+                  </li>
                 </ul>
               </div>
+            </div>
+
+            {/* Supply Safeguards */}
+            <div className="mt-8 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h4 className="font-semibold mb-3 flex items-center space-x-2 text-blue-800 dark:text-blue-200">
+                <Shield className="h-4 w-4" />
+                <span>Supply Safeguards</span>
+              </h4>
+              <ul className="space-y-2 text-sm text-blue-700 dark:text-blue-300">
+                <li>• Fixed 500M supply cap enforced by revoking mint authority</li>
+                <li>• All allocation wallets publicly auditable on-chain</li>
+                <li>• Treasury funds secured by multi-signature contracts</li>
+                <li>• Transparent distribution via explorer links</li>
+                <li>• No ability to create additional tokens beyond initial supply</li>
+              </ul>
             </div>
           </CardContent>
         </Card>
@@ -477,21 +568,21 @@ export function RoadmapPage() {
             Join the {APP_CONFIG.name} Revolution
           </h3>
           <p className="text-purple-100 mb-6 max-w-2xl mx-auto">
-            Be part of the future of SPL tokens on Solana. Create tokens, participate in fair mints, 
+            Be part of the future of SPL tokens on Solana. Create tokens, get SOLF through our launchpad, 
             and help build the most comprehensive token ecosystem.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
-              href="/create" 
+              href="/launchpad" 
               className="bg-white text-purple-600 font-medium px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              Create Your First Token
+              Get SOLF Tokens
             </a>
             <a 
-              href="/dashboard" 
+              href="/create" 
               className="border border-white text-white font-medium px-6 py-3 rounded-lg hover:bg-white/10 transition-colors"
             >
-              View Dashboard
+              Create Your First Token
             </a>
           </div>
         </div>

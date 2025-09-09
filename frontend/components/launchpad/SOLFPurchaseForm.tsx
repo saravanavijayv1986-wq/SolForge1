@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, ArrowRight, AlertTriangle, ExternalLink, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowRight, AlertTriangle, ExternalLink, CheckCircle, Info } from 'lucide-react';
 import { useWallet } from '../../providers/WalletProvider';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { SOLANA_RPC_ENDPOINT } from '../../config';
@@ -29,6 +29,11 @@ const TEAM_WALLET = "3YkFz8vUBa7mLrCcGx4nKzDu5AxoAzK8LjGr9zn8YxJ";
 
 const SOLF_PER_SOL = 10000;
 const FEE_AMOUNT = 0.1;
+
+// Updated tokenomics constants
+const TOTAL_SUPPLY = 500000000; // 500M SOLF
+const TREASURY_ALLOCATION = 250000000; // 250M SOLF for launchpad (50%)
+const MAX_SOL_CAPACITY = TREASURY_ALLOCATION / SOLF_PER_SOL; // 25,000 SOL
 
 export function SOLFPurchaseForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -218,12 +223,12 @@ export function SOLFPurchaseForm() {
       <CardHeader>
         <CardTitle>Buy SOLF Tokens</CardTitle>
         <CardDescription>
-          Purchase SOLF tokens with SOL at a fixed rate of 1 SOL = {SOLF_PER_SOL.toLocaleString()} SOLF
+          Get SOLF tokens with SOL at a fixed rate from our dedicated 250M treasury allocation
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Exchange Rate Info */}
+          {/* Updated Tokenomics Info */}
           <div className="bg-muted rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Exchange Rate:</span>
@@ -232,6 +237,30 @@ export function SOLFPurchaseForm() {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Platform Fee:</span>
               <span className="font-medium">{FEE_AMOUNT} SOL per transaction</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Treasury Allocation:</span>
+              <span className="font-medium">{TREASURY_ALLOCATION.toLocaleString()} SOLF (50%)</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total SOL Capacity:</span>
+              <span className="font-medium">{MAX_SOL_CAPACITY.toLocaleString()} SOL</span>
+            </div>
+          </div>
+
+          {/* Supply Information */}
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+              <div className="text-sm text-blue-800 dark:text-blue-200">
+                <h4 className="font-semibold mb-1">Fixed Supply Economics</h4>
+                <ul className="space-y-1 text-xs">
+                  <li>• Total Supply: {TOTAL_SUPPLY.toLocaleString()} SOLF (capped permanently)</li>
+                  <li>• Treasury: {TREASURY_ALLOCATION.toLocaleString()} SOLF available for launchpad</li>
+                  <li>• Mint authority revoked - no new tokens can ever be created</li>
+                  <li>• Rate may adjust if demand exceeds current capacity</li>
+                </ul>
+              </div>
             </div>
           </div>
 
@@ -293,9 +322,10 @@ export function SOLFPurchaseForm() {
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <h4 className="font-semibold mb-1">How it works:</h4>
                 <ul className="space-y-1 text-xs">
-                  <li>• Your payment will be split: {solAmount.toFixed(1)} SOL goes to Treasury, {FEE_AMOUNT} SOL goes to Team</li>
-                  <li>• SOLF tokens will be automatically transferred to your wallet</li>
+                  <li>• Your payment is split: {solAmount.toFixed(1)} SOL to Treasury, {FEE_AMOUNT} SOL to Team</li>
+                  <li>• SOLF tokens are automatically transferred from Treasury wallet</li>
                   <li>• Transaction is final and irreversible</li>
+                  <li>• Launchpad stops when Treasury allocation is depleted</li>
                   <li>• Make sure you have extra SOL for transaction fees</li>
                 </ul>
               </div>

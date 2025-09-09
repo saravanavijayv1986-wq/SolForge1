@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Shield, Globe, Code, DollarSign, Users, CheckCircle, Rocket } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Globe, Code, DollarSign, Users, CheckCircle, Rocket, Coins, Target } from 'lucide-react';
 import { useWallet } from '../providers/WalletProvider';
 import { APP_CONFIG, TOKEN_CREATION_FEE, NETWORK_CONFIG } from '../config';
 
@@ -13,7 +13,7 @@ export function HomePage() {
     {
       icon: Rocket,
       title: "SOLF Launchpad",
-      description: "Get SOLF tokens directly with SOL at 1:10,000 rate"
+      description: "Get SOLF tokens with SOL at 10,000:1 rate from fixed 250M treasury"
     },
     {
       icon: Zap,
@@ -158,20 +158,24 @@ export function HomePage() {
             SOLF Token Launchpad
           </h2>
           <p className="text-xl text-purple-100 mb-6">
-            Get SOLF tokens directly with SOL at a fixed rate of 1 SOL = 10,000 SOLF
+            Get SOLF tokens with SOL at a fixed rate of 1 SOL = 10,000 SOLF from our dedicated treasury
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <div className="bg-white/10 rounded-lg p-4 text-white">
-              <div className="text-2xl font-bold">20M</div>
-              <div className="text-sm text-purple-100">Total Supply</div>
+              <div className="text-2xl font-bold">500M</div>
+              <div className="text-sm text-purple-100">Max Supply</div>
+            </div>
+            <div className="bg-white/10 rounded-lg p-4 text-white">
+              <div className="text-2xl font-bold">250M</div>
+              <div className="text-sm text-purple-100">Treasury (50%)</div>
             </div>
             <div className="bg-white/10 rounded-lg p-4 text-white">
               <div className="text-2xl font-bold">10,000</div>
               <div className="text-sm text-purple-100">SOLF per SOL</div>
             </div>
             <div className="bg-white/10 rounded-lg p-4 text-white">
-              <div className="text-2xl font-bold">0.1</div>
-              <div className="text-sm text-purple-100">SOL Platform Fee</div>
+              <div className="text-2xl font-bold">25K</div>
+              <div className="text-sm text-purple-100">SOL Capacity</div>
             </div>
           </div>
           <Button asChild size="lg" variant="secondary" className="text-lg px-8">
@@ -183,8 +187,108 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Tokenomics Overview */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              SOLF Tokenomics
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Fixed supply, transparent allocation, and permanent scarcity through revoked mint authority
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Supply Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Target className="h-5 w-5 text-purple-500" />
+                  <span>Supply Distribution</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
+                    <span className="font-medium">Treasury (Launchpad)</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-purple-600">250M</span>
+                      <span className="text-sm text-muted-foreground block">50%</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <span className="font-medium">Team & Operations</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-blue-600">100M</span>
+                      <span className="text-sm text-muted-foreground block">20%</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                    <span className="font-medium">Liquidity Pool</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-green-600">100M</span>
+                      <span className="text-sm text-muted-foreground block">20%</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-950 rounded-lg">
+                    <span className="font-medium">Reserve/Partnerships</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-orange-600">50M</span>
+                      <span className="text-sm text-muted-foreground block">10%</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Key Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Shield className="h-5 w-5 text-green-500" />
+                  <span>Supply Security</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Hard Cap Enforced</h4>
+                      <p className="text-sm text-muted-foreground">500M max supply with mint authority permanently revoked</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Transparent Allocation</h4>
+                      <p className="text-sm text-muted-foreground">All wallets publicly auditable on Solana Explorer</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">No Inflation Risk</h4>
+                      <p className="text-sm text-muted-foreground">No new tokens can ever be created</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Fair Distribution</h4>
+                      <p className="text-sm text-muted-foreground">No presale, equal access through launchpad</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-foreground mb-4">
             Simple, Transparent Pricing
