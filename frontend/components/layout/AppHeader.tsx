@@ -1,32 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Wallet, Home, Plus, BarChart3, Map, Flame, Shield } from 'lucide-react';
+import { Wallet, Home, Plus, BarChart3, Map, Flame } from 'lucide-react';
 import { useWallet } from '../../providers/WalletProvider';
 import { WalletButton } from '../wallet/WalletButton';
 import { APP_CONFIG } from '../../config';
-import backend from '~backend/client';
 
 export function AppHeader() {
   const location = useLocation();
-  const { connected, publicKey } = useWallet();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (connected && publicKey) {
-        try {
-          const res = await backend.fairmint.getAdminWallet();
-          setIsAdmin(publicKey.toString() === res.adminWallet);
-        } catch {
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
-      }
-    };
-    checkAdmin();
-  }, [connected, publicKey]);
+  const { connected } = useWallet();
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
@@ -35,10 +17,6 @@ export function AppHeader() {
     { name: 'Fair Mint', href: '/fair-mint', icon: Flame },
     { name: 'Roadmap', href: '/roadmap', icon: Map },
   ];
-
-  if (isAdmin) {
-    navigation.push({ name: 'Admin', href: '/admin', icon: Shield, requiresWallet: true });
-  }
 
   return (
     <header className="bg-background border-b border-border">

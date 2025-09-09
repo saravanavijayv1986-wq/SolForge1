@@ -10,7 +10,6 @@ import { DashboardPage } from './pages/DashboardPage';
 import { CreateTokenPage } from './pages/CreateTokenPage';
 import { FairMintPage } from './pages/FairMintPage';
 import { RoadmapPage } from './pages/RoadmapPage';
-import { AdminPage } from './pages/AdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +31,6 @@ function AppInner() {
           <Route path="/create" element={<CreateTokenPage />} />
           <Route path="/fair-mint" element={<FairMintPage />} />
           <Route path="/roadmap" element={<RoadmapPage />} />
-          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>
       <AppFooter />
