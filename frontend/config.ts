@@ -1,5 +1,12 @@
-// Solana RPC endpoint for mainnet
-export const SOLANA_RPC_ENDPOINT = "https://api.mainnet-beta.solana.com";
+// Solana RPC endpoint - using reliable public endpoints
+export const SOLANA_RPC_ENDPOINT = "https://solana-mainnet.g.alchemy.com/v2/demo";
+
+// Backup RPC endpoints in case primary fails
+export const BACKUP_RPC_ENDPOINTS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-api.projectserum.com",
+  "https://rpc.ankr.com/solana"
+];
 
 // Supported wallet adapters
 export const SUPPORTED_WALLETS = ['phantom', 'solflare'] as const;

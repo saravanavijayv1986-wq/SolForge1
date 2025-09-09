@@ -272,10 +272,13 @@ export namespace storage {
  * Import the endpoint handlers to derive the types for the client.
  */
 import {
+    finalizeTokenCreation as api_token_actions_finalizeTokenCreation,
+    prepareTokenCreation as api_token_actions_prepareTokenCreation
+} from "~backend/token/actions";
+import {
     getBalance as api_token_balance_getBalance,
     getBalances as api_token_balance_getBalances
 } from "~backend/token/balance";
-import { create as api_token_create_create } from "~backend/token/create";
 import { get as api_token_get_get } from "~backend/token/get";
 import { list as api_token_list_list } from "~backend/token/list";
 import {
@@ -296,7 +299,7 @@ export namespace token {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
-            this.create = this.create.bind(this)
+            this.finalizeTokenCreation = this.finalizeTokenCreation.bind(this)
             this.get = this.get.bind(this)
             this.getBalance = this.getBalance.bind(this)
             this.getBalances = this.getBalances.bind(this)
@@ -305,17 +308,18 @@ export namespace token {
             this.getTransferHistory = this.getTransferHistory.bind(this)
             this.list = this.list.bind(this)
             this.mint = this.mint.bind(this)
+            this.prepareTokenCreation = this.prepareTokenCreation.bind(this)
             this.recordTransfer = this.recordTransfer.bind(this)
             this.updateToken = this.updateToken.bind(this)
         }
 
         /**
-         * Creates a new SPL token with metadata
+         * Executes the signed transaction and records the token
          */
-        public async create(params: RequestType<typeof api_token_create_create>): Promise<ResponseType<typeof api_token_create_create>> {
+        public async finalizeTokenCreation(params: RequestType<typeof api_token_actions_finalizeTokenCreation>): Promise<ResponseType<typeof api_token_actions_finalizeTokenCreation>> {
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/token/create`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_token_create_create>
+            const resp = await this.baseClient.callTypedAPI(`/token/finalize-creation`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_token_actions_finalizeTokenCreation>
         }
 
         /**
@@ -423,6 +427,15 @@ export namespace token {
         }
 
         /**
+         * Prepares the transaction for creating a new token
+         */
+        public async prepareTokenCreation(params: RequestType<typeof api_token_actions_prepareTokenCreation>): Promise<ResponseType<typeof api_token_actions_prepareTokenCreation>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/token/prepare-creation`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_token_actions_prepareTokenCreation>
+        }
+
+        /**
          * Records a token transfer (called after successful on-chain transfer)
          */
         public async recordTransfer(params: RequestType<typeof api_token_transfer_recordTransfer>): Promise<ResponseType<typeof api_token_transfer_recordTransfer>> {
@@ -454,10 +467,6 @@ export namespace token {
  */
 import { connect as api_wallet_connect_connect } from "~backend/wallet/connect";
 import {
-    createFeeTransaction as api_wallet_fee_createFeeTransaction,
-    processFee as api_wallet_fee_processFee
-} from "~backend/wallet/fee";
-import {
     getBalance as api_wallet_verify_getBalance,
     verifyTransaction as api_wallet_verify_verifyTransaction
 } from "~backend/wallet/verify";
@@ -470,9 +479,7 @@ export namespace wallet {
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.connect = this.connect.bind(this)
-            this.createFeeTransaction = this.createFeeTransaction.bind(this)
             this.getBalance = this.getBalance.bind(this)
-            this.processFee = this.processFee.bind(this)
             this.verifyTransaction = this.verifyTransaction.bind(this)
         }
 
@@ -486,30 +493,12 @@ export namespace wallet {
         }
 
         /**
-         * Creates a fee transaction that needs to be signed by the client
-         */
-        public async createFeeTransaction(params: RequestType<typeof api_wallet_fee_createFeeTransaction>): Promise<ResponseType<typeof api_wallet_fee_createFeeTransaction>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/wallet/create-fee-transaction`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_wallet_fee_createFeeTransaction>
-        }
-
-        /**
          * Gets the SOL balance of a wallet with enhanced error handling
          */
         public async getBalance(params: { walletAddress: string }): Promise<ResponseType<typeof api_wallet_verify_getBalance>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/wallet/${encodeURIComponent(params.walletAddress)}/balance`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_wallet_verify_getBalance>
-        }
-
-        /**
-         * Processes a signed fee transaction with comprehensive verification
-         */
-        public async processFee(params: RequestType<typeof api_wallet_fee_processFee>): Promise<ResponseType<typeof api_wallet_fee_processFee>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/wallet/process-fee`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_wallet_fee_processFee>
         }
 
         /**

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { SOLANA_RPC_ENDPOINT } from '../config';
+import { SOLANA_RPC_ENDPOINT, BACKUP_RPC_ENDPOINTS } from '../config';
 
 export type WalletType = 'phantom' | 'solflare' | null;
 
@@ -15,6 +15,7 @@ interface WalletContextType {
   signMessage: (message: Uint8Array) => Promise<Uint8Array>;
   signTransaction: (transaction: any) => Promise<any>;
   availableWallets: WalletType[];
+  connection: Connection;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
@@ -31,13 +32,53 @@ interface WalletProviderProps {
   children: React.ReactNode;
 }
 
+// Function to create connection with fallback
+function createConnectionWithFallback(): Connection {
+  // Try primary endpoint first
+  try {
+    return new Connection(SOLANA_RPC_ENDPOINT, {
+      commitment: 'confirmed',
+      confirmTransactionInitialTimeout: 60000,
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...options?.headers,
+            'Content-Type': 'application/json',
+          },
+        });
+      },
+    });
+  } catch (error) {
+    console.warn('Primary RPC endpoint failed, trying backup...', error);
+    
+    // Try backup endpoints
+    for (const endpoint of BACKUP_RPC_ENDPOINTS) {
+      try {
+        return new Connection(endpoint, {
+          commitment: 'confirmed',
+          confirmTransactionInitialTimeout: 60000,
+        });
+      } catch (backupError) {
+        console.warn(`Backup endpoint ${endpoint} failed:`, backupError);
+      }
+    }
+    
+    // Fallback to primary if all backups fail
+    return new Connection(SOLANA_RPC_ENDPOINT, {
+      commitment: 'confirmed',
+      confirmTransactionInitialTimeout: 60000,
+    });
+  }
+}
+
 export function WalletProvider({ children }: WalletProviderProps) {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [publicKey, setPublicKey] = useState<PublicKey | null>(null);
   const [wallet, setWallet] = useState<any>(null);
   const [walletType, setWalletType] = useState<WalletType>(null);
-  const [connection] = useState(() => new Connection(SOLANA_RPC_ENDPOINT));
+  const [connection] = useState(() => createConnectionWithFallback());
 
   // Check available wallets
   const getAvailableWallets = useCallback((): WalletType[] => {
@@ -235,7 +276,8 @@ export function WalletProvider({ children }: WalletProviderProps) {
     disconnect,
     signMessage,
     signTransaction,
-    availableWallets
+    availableWallets,
+    connection
   };
 
   return (

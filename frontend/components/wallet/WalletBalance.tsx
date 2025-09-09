@@ -6,20 +6,42 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useWallet } from '../../providers/WalletProvider';
 import { NETWORK_CONFIG } from '../../config';
-import { parseSolanaError, formatSolanaError } from '../../utils/solana-errors';
+import { parseSolanaError, formatSolanaError, withRetry } from '../../utils/solana-errors';
 import backend from '~backend/client';
 
 export function WalletBalance() {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, connection } = useWallet();
 
   const { data: balance, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['walletBalance', publicKey?.toString()],
     queryFn: async () => {
       if (!publicKey) return null;
-      const response = await backend.wallet.getBalance({
-        walletAddress: publicKey.toString()
-      });
-      return response;
+      
+      // Try backend first, with fallback to direct connection
+      try {
+        const response = await backend.wallet.getBalance({
+          walletAddress: publicKey.toString()
+        });
+        return response;
+      } catch (backendError) {
+        console.warn('Backend balance check failed, trying direct connection:', backendError);
+        
+        // Fallback to direct Solana connection with retry logic
+        try {
+          const balanceInLamports = await withRetry(async () => {
+            return await connection.getBalance(publicKey, 'confirmed');
+          }, 3, 1000);
+          
+          return {
+            balance: (balanceInLamports / 1e9).toString(),
+            lamports: balanceInLamports.toString(),
+            lastUpdated: Date.now()
+          };
+        } catch (directError) {
+          // If both methods fail, throw the original backend error
+          throw backendError;
+        }
+      }
     },
     enabled: connected && !!publicKey,
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -29,9 +51,9 @@ export function WalletBalance() {
       if (solanaError.code === 'INVALID_ADDRESS') {
         return false;
       }
-      return failureCount < 3;
+      return failureCount < 2; // Reduced retries since we have fallback logic
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
   const formatBalance = (balance: string) => {

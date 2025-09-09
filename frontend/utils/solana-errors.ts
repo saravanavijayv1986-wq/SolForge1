@@ -28,6 +28,7 @@ export const SOLANA_ERROR_CODES = {
   INVALID_ADDRESS: 'INVALID_ADDRESS',
   BLOCKHASH_EXPIRED: 'BLOCKHASH_EXPIRED',
   RATE_LIMITED: 'RATE_LIMITED',
+  ACCESS_FORBIDDEN: 'ACCESS_FORBIDDEN',
   UNKNOWN: 'UNKNOWN'
 } as const;
 
@@ -42,6 +43,17 @@ export function parseSolanaError(error: any): SolanaNetworkError {
     return new SolanaNetworkError(
       'Unable to connect to Solana network. Please check your internet connection and try again.',
       SOLANA_ERROR_CODES.NETWORK_UNAVAILABLE,
+      { originalError: error }
+    );
+  }
+
+  // Access forbidden (403 errors)
+  if (originalMessage.includes('403') || 
+      originalMessage.includes('Access forbidden') ||
+      originalMessage.includes('Forbidden')) {
+    return new SolanaNetworkError(
+      'Access to Solana RPC endpoint denied. This may be due to rate limiting or API key requirements.',
+      SOLANA_ERROR_CODES.ACCESS_FORBIDDEN,
       { originalError: error }
     );
   }
@@ -131,7 +143,8 @@ export async function withRetry<T>(
       
       // Don't retry on certain error types
       if (solanaError.code === SOLANA_ERROR_CODES.INSUFFICIENT_FUNDS ||
-          solanaError.code === SOLANA_ERROR_CODES.INVALID_ADDRESS) {
+          solanaError.code === SOLANA_ERROR_CODES.INVALID_ADDRESS ||
+          solanaError.code === SOLANA_ERROR_CODES.ACCESS_FORBIDDEN) {
         throw solanaError;
       }
       
@@ -217,6 +230,13 @@ export function formatSolanaError(error: SolanaNetworkError): {
         title: 'Network Error',
         description: error.message,
         action: 'Check your internet connection and try again.'
+      };
+
+    case SOLANA_ERROR_CODES.ACCESS_FORBIDDEN:
+      return {
+        title: 'RPC Access Denied',
+        description: 'Unable to access Solana network due to rate limiting or restrictions.',
+        action: 'Please try again in a few moments. The app will automatically retry with backup endpoints.'
       };
       
     case SOLANA_ERROR_CODES.INSUFFICIENT_FUNDS:

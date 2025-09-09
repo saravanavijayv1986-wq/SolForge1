@@ -10,8 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, ArrowRight, AlertTriangle, ExternalLink, CheckCircle, Info } from 'lucide-react';
 import { useWallet } from '../../providers/WalletProvider';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { SOLANA_RPC_ENDPOINT } from '../../config';
-import { parseSolanaError, formatSolanaError } from '../../utils/solana-errors';
+import { parseSolanaError, formatSolanaError, withRetry } from '../../utils/solana-errors';
 import backend from '~backend/client';
 
 const purchaseSchema = z.object({
@@ -40,7 +39,7 @@ export function SOLFPurchaseForm() {
   const [creatingTransaction, setCreatingTransaction] = useState(false);
   const [processingPurchase, setProcessingPurchase] = useState(false);
   const [completedTxSig, setCompletedTxSig] = useState<string | null>(null);
-  const { publicKey, wallet } = useWallet();
+  const { publicKey, wallet, connection } = useWallet();
   const { toast } = useToast();
 
   const {
@@ -80,11 +79,13 @@ export function SOLFPurchaseForm() {
     setCreatingTransaction(true);
 
     try {
-      const connection = new Connection(SOLANA_RPC_ENDPOINT);
       const solAmountNumber = parseFloat(data.solAmount);
       
-      // Check wallet balance
-      const balance = await connection.getBalance(publicKey);
+      // Check wallet balance with retry logic
+      const balance = await withRetry(async () => {
+        return await connection.getBalance(publicKey);
+      }, 3, 1000);
+      
       const balanceInSol = balance / LAMPORTS_PER_SOL;
       const requiredAmount = solAmountNumber + FEE_AMOUNT + 0.01; // Extra for tx fees
       
@@ -113,8 +114,11 @@ export function SOLFPurchaseForm() {
         })
       );
 
-      // Get latest blockhash
-      const { blockhash } = await connection.getLatestBlockhash('confirmed');
+      // Get latest blockhash with retry
+      const { blockhash } = await withRetry(async () => {
+        return await connection.getLatestBlockhash('confirmed');
+      }, 3, 1000);
+      
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
@@ -123,11 +127,13 @@ export function SOLFPurchaseForm() {
       // Sign transaction
       const signedTransaction = await wallet.signTransaction(transaction);
       
-      // Send transaction
-      const txSig = await connection.sendRawTransaction(signedTransaction.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed'
-      });
+      // Send transaction with retry logic
+      const txSig = await withRetry(async () => {
+        return await connection.sendRawTransaction(signedTransaction.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed'
+        });
+      }, 3, 2000);
 
       toast({
         title: "Transaction Sent",
@@ -136,8 +142,11 @@ export function SOLFPurchaseForm() {
 
       setProcessingPurchase(true);
 
-      // Wait for confirmation
-      const confirmation = await connection.confirmTransaction(txSig, 'confirmed');
+      // Wait for confirmation with retry logic
+      const confirmation = await withRetry(async () => {
+        return await connection.confirmTransaction(txSig, 'confirmed');
+      }, 5, 3000);
+      
       if (confirmation.value.err) {
         throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
       }
