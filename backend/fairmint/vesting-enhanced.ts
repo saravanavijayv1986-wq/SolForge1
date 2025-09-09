@@ -171,8 +171,8 @@ export const createDetailedVestingSchedules = api<{
             event_id, user_wallet, total_solf_allocated, tge_amount, vesting_amount,
             vesting_start_time, vesting_end_time
           ) VALUES (
-            ${req.eventId}, ${allocation.userWallet}, ${totalSolfForUser.toString()},
-            ${tgeAmount.toString()}, ${vestingAmount.toString()},
+            ${req.eventId}, ${allocation.userWallet}, ${totalSolfForUser.toString()}::numeric,
+            ${tgeAmount.toString()}::numeric, ${vestingAmount.toString()}::numeric,
             ${vestingStartTime}, ${vestingEndTime}
           )
         `;
@@ -188,9 +188,9 @@ export const createDetailedVestingSchedules = api<{
         UPDATE fair_mint_events 
         SET 
           is_finalized = true, 
-          solf_per_usd_rate = ${req.solfPerUsdRate}, 
+          solf_per_usd_rate = ${req.solfPerUsdRate}::numeric, 
           is_active = false,
-          total_solf_allocated = ${totalSolfAllocated.toString()}
+          total_solf_allocated = ${totalSolfAllocated.toString()}::numeric
         WHERE id = ${req.eventId}
       `;
 
@@ -408,8 +408,8 @@ export const enhancedClaimTokens = api<ClaimRequest, ClaimResponse>(
 
       await tx.exec`
         UPDATE fair_mint_vesting 
-        SET claimed_tge = ${newClaimedTge.toString()},
-            claimed_vesting = ${newClaimedVesting.toString()},
+        SET claimed_tge = ${newClaimedTge.toString()}::numeric,
+            claimed_vesting = ${newClaimedVesting.toString()}::numeric,
             last_claim_time = ${now},
             updated_at = ${now}
         WHERE id = ${vesting.id}
@@ -421,8 +421,8 @@ export const enhancedClaimTokens = api<ClaimRequest, ClaimResponse>(
           event_id, user_wallet, tge_claimed, vesting_claimed, total_claimed,
           transaction_signature, claim_type
         ) VALUES (
-          ${req.eventId}, ${req.userWallet}, ${claimableTge.toString()}, 
-          ${claimableVesting.toString()}, ${totalClaimable.toString()},
+          ${req.eventId}, ${req.userWallet}, ${claimableTge.toString()}::numeric, 
+          ${claimableVesting.toString()}::numeric, ${totalClaimable.toString()}::numeric,
           ${transactionSignature}, ${req.claimType}
         )
       `;

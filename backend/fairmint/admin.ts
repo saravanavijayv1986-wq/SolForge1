@@ -142,7 +142,7 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
         throw APIError.invalidArgument("Invalid max per transaction USD amount.");
       }
 
-      if (isNaN(minTxUsdNum) || minTxUsdNum < 0) {
+      if (isNaN(minTxUsdNum) || minTxUsd < 0) {
         throw APIError.invalidArgument("Invalid minimum transaction USD amount.");
       }
 
@@ -175,8 +175,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
             referral_pool_percentage
           ) VALUES (
             ${req.eventName}, ${req.description || null}, ${req.startTime}, ${req.endTime}, true,
-            ${req.tgePercentage}, ${req.vestingDays}, ${req.platformFeeBps}, ${req.maxPerWalletUsd},
-            ${req.maxPerTxUsd}, ${req.quoteTtlSeconds}, ${req.minTxUsd}, ${req.treasuryAddress},
+            ${req.tgePercentage}, ${req.vestingDays}, ${req.platformFeeBps}, ${req.maxPerWalletUsd}::numeric,
+            ${req.maxPerTxUsd}::numeric, ${req.quoteTtlSeconds}, ${req.minTxUsd}::numeric, ${req.treasuryAddress},
             ${req.referralPoolPercentage}
           )
           RETURNING 
@@ -212,7 +212,7 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
               daily_cap_usd, dex_price_source
             ) VALUES (
               ${event.id}, ${token.mintAddress}, ${token.tokenName.trim()}, ${token.tokenSymbol.trim().toUpperCase()}, ${token.tokenLogoUrl || null},
-              ${token.dailyCapUsd}, ${token.dexPriceSource?.trim() || null}
+              ${token.dailyCapUsd}::numeric, ${token.dexPriceSource?.trim() || null}
             )
             RETURNING
               id, event_id as "eventId", mint_address as "mintAddress",

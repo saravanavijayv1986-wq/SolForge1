@@ -318,8 +318,8 @@ export const burnTokens = api<BurnTokensRequest, BurnTokensResponse>(
           transaction_signature, referrer_wallet, quote_id
         )
         VALUES (
-          ${quote.eventId}, ${req.userWallet}, ${quote.tokenMintAddress}, ${quote.tokenAmount},
-          ${quote.usdValue}, ${quote.priceSource}, ${quote.priceAtQuote}, ${quote.estimatedSolf},
+          ${quote.eventId}, ${req.userWallet}, ${quote.tokenMintAddress}, ${quote.tokenAmount}::numeric,
+          ${quote.usdValue}::numeric, ${quote.priceSource}, ${quote.priceAtQuote}::numeric, ${quote.estimatedSolf}::numeric,
           ${req.transactionSignature}, ${req.referrerWallet || null}, ${req.quoteId}
         )
         RETURNING id
@@ -332,14 +332,14 @@ export const burnTokens = api<BurnTokensRequest, BurnTokensResponse>(
       // Update daily burned amount for token
       await tx.exec`
         UPDATE fair_mint_accepted_tokens 
-        SET current_daily_burned_usd = current_daily_burned_usd + ${quote.usdValue}
+        SET current_daily_burned_usd = current_daily_burned_usd + ${quote.usdValue}::numeric
         WHERE event_id = ${quote.eventId} AND mint_address = ${quote.tokenMintAddress}
       `;
 
       // Update event totals
       await tx.exec`
         UPDATE fair_mint_events 
-        SET total_usd_burned = total_usd_burned + ${quote.usdValue}
+        SET total_usd_burned = total_usd_burned + ${quote.usdValue}::numeric
         WHERE id = ${quote.eventId}
       `;
 
@@ -353,8 +353,8 @@ export const burnTokens = api<BurnTokensRequest, BurnTokensResponse>(
       if (existingAllocation) {
         await tx.exec`
           UPDATE fair_mint_allocations 
-          SET total_usd_burned = total_usd_burned + ${quote.usdValue},
-              total_solf_allocated = total_solf_allocated + ${quote.estimatedSolf}
+          SET total_usd_burned = total_usd_burned + ${quote.usdValue}::numeric,
+              total_solf_allocated = total_solf_allocated + ${quote.estimatedSolf}::numeric
           WHERE event_id = ${quote.eventId} AND user_wallet = ${req.userWallet}
         `;
       } else {
@@ -363,7 +363,7 @@ export const burnTokens = api<BurnTokensRequest, BurnTokensResponse>(
             event_id, user_wallet, total_usd_burned, total_solf_allocated
           )
           VALUES (
-            ${quote.eventId}, ${req.userWallet}, ${quote.usdValue}, ${quote.estimatedSolf}
+            ${quote.eventId}, ${req.userWallet}, ${quote.usdValue}::numeric, ${quote.estimatedSolf}::numeric
           )
         `;
       }
@@ -373,7 +373,7 @@ export const burnTokens = api<BurnTokensRequest, BurnTokensResponse>(
         await tx.exec`
           UPDATE fair_mint_referrals 
           SET successful_burns = successful_burns + 1,
-              total_usd_referred = total_usd_referred + ${quote.usdValue}
+              total_usd_referred = total_usd_referred + ${quote.usdValue}::numeric
           WHERE event_id = ${quote.eventId} AND referrer_wallet = ${req.referrerWallet}
         `;
       }
