@@ -8,6 +8,7 @@ import { AppFooter } from './components/layout/AppFooter';
 import { HomePage } from './pages/HomePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CreateTokenPage } from './pages/CreateTokenPage';
+import { LaunchpadPage } from './pages/LaunchpadPage';
 import { RoadmapPage } from './pages/RoadmapPage';
 
 const queryClient = new QueryClient({
@@ -26,6 +27,7 @@ function AppInner() {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/launchpad" element={<LaunchpadPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/create" element={<CreateTokenPage />} />
           <Route path="/roadmap" element={<RoadmapPage />} />

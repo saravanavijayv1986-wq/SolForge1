@@ -34,6 +34,7 @@ const BROWSER = typeof globalThis === "object" && ("window" in globalThis);
  */
 export class Client {
     public readonly health: health.ServiceClient
+    public readonly launchpad: launchpad.ServiceClient
     public readonly storage: storage.ServiceClient
     public readonly token: token.ServiceClient
     public readonly wallet: wallet.ServiceClient
@@ -52,6 +53,7 @@ export class Client {
         this.options = options ?? {}
         const base = new BaseClient(this.target, this.options)
         this.health = new health.ServiceClient(base)
+        this.launchpad = new launchpad.ServiceClient(base)
         this.storage = new storage.ServiceClient(base)
         this.token = new token.ServiceClient(base)
         this.wallet = new wallet.ServiceClient(base)
@@ -139,6 +141,79 @@ export namespace health {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/health/solana`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_health_check_solanaHealth>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { buy as api_launchpad_buy_buy } from "~backend/launchpad/buy";
+import {
+    getRecentPurchases as api_launchpad_stats_getRecentPurchases,
+    getStats as api_launchpad_stats_getStats,
+    getUserHistory as api_launchpad_stats_getUserHistory
+} from "~backend/launchpad/stats";
+
+export namespace launchpad {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.buy = this.buy.bind(this)
+            this.getRecentPurchases = this.getRecentPurchases.bind(this)
+            this.getStats = this.getStats.bind(this)
+            this.getUserHistory = this.getUserHistory.bind(this)
+        }
+
+        /**
+         * Buys SOLF tokens with SOL through the launchpad
+         */
+        public async buy(params: RequestType<typeof api_launchpad_buy_buy>): Promise<ResponseType<typeof api_launchpad_buy_buy>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/launchpad/buy`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_launchpad_buy_buy>
+        }
+
+        /**
+         * Gets recent purchases across all users
+         */
+        public async getRecentPurchases(params: RequestType<typeof api_launchpad_stats_getRecentPurchases>): Promise<ResponseType<typeof api_launchpad_stats_getRecentPurchases>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                limit:  params.limit === undefined ? undefined : String(params.limit),
+                offset: params.offset === undefined ? undefined : String(params.offset),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/launchpad/recent`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_launchpad_stats_getRecentPurchases>
+        }
+
+        /**
+         * Gets comprehensive launchpad statistics
+         */
+        public async getStats(): Promise<ResponseType<typeof api_launchpad_stats_getStats>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/launchpad/stats`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_launchpad_stats_getStats>
+        }
+
+        /**
+         * Gets purchase history for a specific wallet
+         */
+        public async getUserHistory(params: RequestType<typeof api_launchpad_stats_getUserHistory>): Promise<ResponseType<typeof api_launchpad_stats_getUserHistory>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                limit:  params.limit === undefined ? undefined : String(params.limit),
+                offset: params.offset === undefined ? undefined : String(params.offset),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/launchpad/history/${encodeURIComponent(params.wallet)}`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_launchpad_stats_getUserHistory>
         }
     }
 }

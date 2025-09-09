@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Wallet, Home, Plus, BarChart3, Map } from 'lucide-react';
+import { Wallet, Home, Plus, BarChart3, Map, Rocket } from 'lucide-react';
 import { useWallet } from '../../providers/WalletProvider';
 import { WalletButton } from '../wallet/WalletButton';
 import { APP_CONFIG } from '../../config';
@@ -12,6 +12,7 @@ export function AppHeader() {
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
+    { name: 'Launchpad', href: '/launchpad', icon: Rocket },
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3, requiresWallet: true },
     { name: 'Create Token', href: '/create', icon: Plus, requiresWallet: true },
     { name: 'Roadmap', href: '/roadmap', icon: Map },

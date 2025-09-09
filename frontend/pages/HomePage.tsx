@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Shield, Globe, Code, DollarSign, Users, CheckCircle } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Globe, Code, DollarSign, Users, CheckCircle, Rocket } from 'lucide-react';
 import { useWallet } from '../providers/WalletProvider';
 import { APP_CONFIG, TOKEN_CREATION_FEE, NETWORK_CONFIG } from '../config';
 
@@ -10,6 +10,11 @@ export function HomePage() {
   const { connected } = useWallet();
 
   const features = [
+    {
+      icon: Rocket,
+      title: "SOLF Launchpad",
+      description: "Get SOLF tokens directly with SOL at 1:10,000 rate"
+    },
     {
       icon: Zap,
       title: "Lightning Fast",
@@ -34,11 +39,6 @@ export function HomePage() {
       icon: DollarSign,
       title: "Transparent Pricing",
       description: `Simple ${TOKEN_CREATION_FEE} SOL fee per token with no hidden costs`
-    },
-    {
-      icon: Users,
-      title: "Community Driven",
-      description: "Built by creators, for creators"
     }
   ];
 
@@ -74,24 +74,25 @@ export function HomePage() {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" className="text-lg px-8">
+              <Link to="/launchpad" className="flex items-center space-x-2">
+                <Rocket className="h-5 w-5" />
+                <span>Buy SOLF Tokens</span>
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </Button>
             {connected ? (
               <>
-                <Button asChild size="lg" className="text-lg px-8">
-                  <Link to="/create" className="flex items-center space-x-2">
-                    <span>Create Your First Token ({TOKEN_CREATION_FEE} SOL)</span>
-                    <ArrowRight className="h-5 w-5" />
-                  </Link>
+                <Button asChild variant="outline" size="lg" className="text-lg px-8">
+                  <Link to="/create">Create Token ({TOKEN_CREATION_FEE} SOL)</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="text-lg px-8">
                   <Link to="/dashboard">View Dashboard</Link>
                 </Button>
               </>
             ) : (
-              <Button asChild size="lg" className="text-lg px-8">
-                <Link to="/dashboard" className="flex items-center space-x-2">
-                  <span>Get Started</span>
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
+              <Button asChild variant="outline" size="lg" className="text-lg px-8">
+                <Link to="/dashboard">Connect Wallet</Link>
               </Button>
             )}
           </div>
@@ -147,6 +148,41 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* SOLF Launchpad Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-500 to-blue-500">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
+            <Rocket className="h-8 w-8 text-purple-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4">
+            SOLF Token Launchpad
+          </h2>
+          <p className="text-xl text-purple-100 mb-6">
+            Get SOLF tokens directly with SOL at a fixed rate of 1 SOL = 10,000 SOLF
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <div className="bg-white/10 rounded-lg p-4 text-white">
+              <div className="text-2xl font-bold">20M</div>
+              <div className="text-sm text-purple-100">Total Supply</div>
+            </div>
+            <div className="bg-white/10 rounded-lg p-4 text-white">
+              <div className="text-2xl font-bold">10,000</div>
+              <div className="text-sm text-purple-100">SOLF per SOL</div>
+            </div>
+            <div className="bg-white/10 rounded-lg p-4 text-white">
+              <div className="text-2xl font-bold">0.1</div>
+              <div className="text-sm text-purple-100">SOL Platform Fee</div>
+            </div>
+          </div>
+          <Button asChild size="lg" variant="secondary" className="text-lg px-8">
+            <Link to="/launchpad" className="flex items-center space-x-2">
+              <span>Buy SOLF Now</span>
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
         <div className="max-w-4xl mx-auto text-center">
@@ -175,20 +211,29 @@ export function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-500 to-blue-500">
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Launch Your Token?
+          <h2 className="text-3xl font-bold text-foreground mb-4">
+            Ready to Get Started?
           </h2>
-          <p className="text-xl text-purple-100 mb-8">
+          <p className="text-xl text-muted-foreground mb-8">
             Join thousands of creators who trust {APP_CONFIG.name} for their token needs
           </p>
-          <Button asChild size="lg" variant="secondary" className="text-lg px-8">
-            <Link to={connected ? "/create" : "/dashboard"} className="flex items-center space-x-2">
-              <span>Start Creating</span>
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" className="text-lg px-8">
+              <Link to="/launchpad" className="flex items-center space-x-2">
+                <Rocket className="h-5 w-5" />
+                <span>Buy SOLF</span>
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="text-lg px-8">
+              <Link to={connected ? "/create" : "/dashboard"} className="flex items-center space-x-2">
+                <span>Create Token</span>
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
     </div>
