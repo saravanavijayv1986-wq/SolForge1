@@ -130,27 +130,27 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
       }
 
       // Validate USD amounts
-      const maxPerWalletUsd = parseFloat(req.maxPerWalletUsd);
-      const maxPerTxUsd = parseFloat(req.maxPerTxUsd);
-      const minTxUsd = parseFloat(req.minTxUsd);
+      const maxPerWalletUsdNum = parseFloat(req.maxPerWalletUsd);
+      const maxPerTxUsdNum = parseFloat(req.maxPerTxUsd);
+      const minTxUsdNum = parseFloat(req.minTxUsd);
 
-      if (isNaN(maxPerWalletUsd) || maxPerWalletUsd <= 0) {
+      if (isNaN(maxPerWalletUsdNum) || maxPerWalletUsdNum <= 0) {
         throw APIError.invalidArgument("Invalid max per wallet USD amount.");
       }
 
-      if (isNaN(maxPerTxUsd) || maxPerTxUsd <= 0) {
+      if (isNaN(maxPerTxUsdNum) || maxPerTxUsdNum <= 0) {
         throw APIError.invalidArgument("Invalid max per transaction USD amount.");
       }
 
-      if (isNaN(minTxUsd) || minTxUsd < 0) {
+      if (isNaN(minTxUsdNum) || minTxUsdNum < 0) {
         throw APIError.invalidArgument("Invalid minimum transaction USD amount.");
       }
 
-      if (maxPerTxUsd > maxPerWalletUsd) {
+      if (maxPerTxUsdNum > maxPerWalletUsdNum) {
         throw APIError.invalidArgument("Max per transaction cannot exceed max per wallet.");
       }
 
-      if (minTxUsd > maxPerTxUsd) {
+      if (minTxUsdNum > maxPerTxUsdNum) {
         throw APIError.invalidArgument("Minimum transaction cannot exceed maximum transaction.");
       }
 
@@ -175,8 +175,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
             referral_pool_percentage
           ) VALUES (
             ${req.eventName}, ${req.description || null}, ${req.startTime}, ${req.endTime}, true,
-            ${req.tgePercentage}, ${req.vestingDays}, ${req.platformFeeBps}, ${req.maxPerWalletUsd},
-            ${req.maxPerTxUsd}, ${req.quoteTtlSeconds}, ${req.minTxUsd}, ${req.treasuryAddress},
+            ${req.tgePercentage}, ${req.vestingDays}, ${req.platformFeeBps}, ${maxPerWalletUsdNum},
+            ${maxPerTxUsdNum}, ${req.quoteTtlSeconds}, ${minTxUsdNum}, ${req.treasuryAddress},
             ${req.referralPoolPercentage}
           )
           RETURNING 
@@ -206,13 +206,15 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
             throw APIError.invalidArgument(`Duplicate mint address: ${token.mintAddress}`);
           }
 
+          const dailyCapUsdNum = parseFloat(token.dailyCapUsd);
+
           const acceptedToken = await tx.queryRow<AcceptedToken>`
             INSERT INTO fair_mint_accepted_tokens (
               event_id, mint_address, token_name, token_symbol, token_logo_url,
               daily_cap_usd, dex_price_source
             ) VALUES (
               ${event.id}, ${token.mintAddress}, ${token.tokenName.trim()}, ${token.tokenSymbol.trim().toUpperCase()}, ${token.tokenLogoUrl || null},
-              ${token.dailyCapUsd}, ${token.dexPriceSource?.trim() || null}
+              ${dailyCapUsdNum}, ${token.dexPriceSource?.trim() || null}
             )
             RETURNING
               id, event_id as "eventId", mint_address as "mintAddress",
