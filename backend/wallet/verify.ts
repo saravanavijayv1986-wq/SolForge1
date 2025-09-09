@@ -89,7 +89,7 @@ export const verifyTransaction = api<VerifyTransactionRequest, VerifyTransaction
       const fee = transaction.meta?.fee ? (transaction.meta.fee / 1e9).toString() : undefined;
       const preBalances = transaction.meta?.preBalances || [];
       const postBalances = transaction.meta?.postBalances || [];
-      const accountKeys = transaction.transaction.message.accountKeys;
+      const accountKeys = (transaction.transaction.message as any).accountKeys;
 
       // Find SOL transfer amount and addresses
       let transferAmount: string | undefined;
@@ -192,7 +192,7 @@ export const getBalance = api<GetBalanceRequest, GetBalanceResponse>(
       const publicKey = new PublicKey(req.walletAddress);
       
       // Get balance with retries for mainnet reliability
-      let balance;
+      let balance = 0;
       let attempts = 0;
       const maxAttempts = 3;
       

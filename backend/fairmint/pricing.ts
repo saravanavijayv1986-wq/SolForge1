@@ -169,20 +169,23 @@ async function getRaydiumDirectPrice(
   url.searchParams.append("txVersion", "V0");
 
   const response = await fetch(url.toString(), {
-    headers: { 
+    headers: {
       "accept": "application/json",
       "User-Agent": "SolForge/1.0"
     },
-    timeout: 10000
+    signal: AbortSignal.timeout(10000)
   });
 
   if (!response.ok) {
     throw new Error(`Raydium API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
-  
-  if (!data.success || !data.data || !data.data.outAmount) {
+  const data = (await response.json()) as {
+    success?: boolean;
+    data?: { outAmount: string };
+  };
+
+  if (!data?.success || !data.data?.outAmount) {
     throw new Error("Invalid response from Raydium API");
   }
 

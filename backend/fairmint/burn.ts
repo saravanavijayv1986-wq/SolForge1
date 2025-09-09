@@ -260,10 +260,11 @@ export const burnTokens = api<BurnTokensRequest, BurnTokensResponse>(
 
       // Verify the transaction contains a burn instruction
       // This is a simplified check - in production you'd want more robust verification
-      const hasBurnInstruction = txDetails.transaction.message.instructions.some(instruction => {
+      const message: any = txDetails.transaction.message;
+      const hasBurnInstruction = message.instructions?.some((instruction: any) => {
         // Check if it's a SPL token burn instruction
         return instruction.programIdIndex !== undefined;
-      });
+      }) ?? false;
 
       if (!hasBurnInstruction) {
         throw APIError.invalidArgument("Transaction does not contain a valid burn instruction");

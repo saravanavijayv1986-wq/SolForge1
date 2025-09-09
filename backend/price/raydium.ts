@@ -35,7 +35,11 @@ export async function quote(inputMint: string, outputMint: string, amount: strin
       throw new Error(`Raydium compute failed: ${res.status} ${text}`);
     }
 
-    const j = await res.json();
+    const j = (await res.json()) as {
+      success?: boolean;
+      data?: { outAmount: string };
+      msg?: string;
+    };
     if (!j?.success || !j.data) {
       throw new Error(j?.msg || "Raydium compute returned no success or data");
     }

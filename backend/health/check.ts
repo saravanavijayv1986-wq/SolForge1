@@ -180,7 +180,7 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
       testUrl.searchParams.append("slippageBps", "50");
       
       const response = await fetch(testUrl.toString(), {
-        timeout: 5000,
+        signal: AbortSignal.timeout(5000),
         headers: { "accept": "application/json" }
       });
       
