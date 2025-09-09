@@ -112,11 +112,6 @@ import {
     getTokenLeaderboard as api_fairmint_leaderboard_getTokenLeaderboard
 } from "~backend/fairmint/leaderboard";
 import {
-    getBatchPrices as api_fairmint_pricing_getBatchPrices,
-    getRaydiumPrice as api_fairmint_pricing_getRaydiumPrice,
-    healthCheck as api_fairmint_pricing_healthCheck
-} from "~backend/fairmint/pricing";
-import {
     getQuote as api_fairmint_quote_getQuote,
     validateQuote as api_fairmint_quote_validateQuote
 } from "~backend/fairmint/quote";
@@ -170,14 +165,12 @@ export namespace fairmint {
             this.enhancedEmergencyPause = this.enhancedEmergencyPause.bind(this)
             this.getActiveEvent = this.getActiveEvent.bind(this)
             this.getAdminWallet = this.getAdminWallet.bind(this)
-            this.getBatchPrices = this.getBatchPrices.bind(this)
             this.getClaimableAmount = this.getClaimableAmount.bind(this)
             this.getDetailedClaimableAmount = this.getDetailedClaimableAmount.bind(this)
             this.getEventStats = this.getEventStats.bind(this)
             this.getEventVestingSchedules = this.getEventVestingSchedules.bind(this)
             this.getLeaderboard = this.getLeaderboard.bind(this)
             this.getQuote = this.getQuote.bind(this)
-            this.getRaydiumPrice = this.getRaydiumPrice.bind(this)
             this.getRealTimeBurnStream = this.getRealTimeBurnStream.bind(this)
             this.getRealtimeDashboard = this.getRealtimeDashboard.bind(this)
             this.getRealtimeLeaderboard = this.getRealtimeLeaderboard.bind(this)
@@ -186,7 +179,6 @@ export namespace fairmint {
             this.getUserBurns = this.getUserBurns.bind(this)
             this.getVestingEventSummary = this.getVestingEventSummary.bind(this)
             this.getVestingSchedule = this.getVestingSchedule.bind(this)
-            this.healthCheck = this.healthCheck.bind(this)
             this.pauseEvent = this.pauseEvent.bind(this)
             this.performEnhancedSafetyCheck = this.performEnhancedSafetyCheck.bind(this)
             this.performSafetyCheck = this.performSafetyCheck.bind(this)
@@ -311,15 +303,6 @@ export namespace fairmint {
         }
 
         /**
-         * Batch price fetching for multiple tokens
-         */
-        public async getBatchPrices(params: RequestType<typeof api_fairmint_pricing_getBatchPrices>): Promise<ResponseType<typeof api_fairmint_pricing_getBatchPrices>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/pricing/batch`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_pricing_getBatchPrices>
-        }
-
-        /**
          * Gets claimable amounts for a user
          */
         public async getClaimableAmount(params: RequestType<typeof api_fairmint_vesting_getClaimableAmount>): Promise<ResponseType<typeof api_fairmint_vesting_getClaimableAmount>> {
@@ -393,15 +376,6 @@ export namespace fairmint {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/fair-mint/quote`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_quote_getQuote>
-        }
-
-        /**
-         * Gets price data exclusively from Raydium with comprehensive error handling
-         */
-        public async getRaydiumPrice(params: { mint: string }): Promise<ResponseType<typeof api_fairmint_pricing_getRaydiumPrice>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium/${encodeURIComponent(params.mint)}`, {method: "GET", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_pricing_getRaydiumPrice>
         }
 
         /**
@@ -515,15 +489,6 @@ export namespace fairmint {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/fair-mint/vesting/schedule/${encodeURIComponent(params.userWallet)}`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_vesting_getVestingSchedule>
-        }
-
-        /**
-         * Health check endpoint for pricing service
-         */
-        public async healthCheck(): Promise<ResponseType<typeof api_fairmint_pricing_healthCheck>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/pricing/health`, {method: "GET", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_fairmint_pricing_healthCheck>
         }
 
         /**
@@ -660,12 +625,6 @@ export namespace health {
  * Import the endpoint handlers to derive the types for the client.
  */
 import { getPrice as api_price_get_getPrice } from "~backend/price/get";
-import {
-    clearPriceCache as api_price_raydium_only_clearPriceCache,
-    getBatchRaydiumPrices as api_price_raydium_only_getBatchRaydiumPrices,
-    getRaydiumOnlyPrice as api_price_raydium_only_getRaydiumOnlyPrice,
-    raydiumHealthCheck as api_price_raydium_only_raydiumHealthCheck
-} from "~backend/price/raydium-only";
 
 export namespace price {
 
@@ -674,29 +633,7 @@ export namespace price {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
-            this.clearPriceCache = this.clearPriceCache.bind(this)
-            this.getBatchRaydiumPrices = this.getBatchRaydiumPrices.bind(this)
             this.getPrice = this.getPrice.bind(this)
-            this.getRaydiumOnlyPrice = this.getRaydiumOnlyPrice.bind(this)
-            this.raydiumHealthCheck = this.raydiumHealthCheck.bind(this)
-        }
-
-        /**
-         * Clear pricing cache
-         */
-        public async clearPriceCache(): Promise<ResponseType<typeof api_price_raydium_only_clearPriceCache>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/clear-cache`, {method: "POST", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_clearPriceCache>
-        }
-
-        /**
-         * Batch price fetching for multiple tokens
-         */
-        public async getBatchRaydiumPrices(params: RequestType<typeof api_price_raydium_only_getBatchRaydiumPrices>): Promise<ResponseType<typeof api_price_raydium_only_getBatchRaydiumPrices>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/batch`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_getBatchRaydiumPrices>
         }
 
         /**
@@ -706,24 +643,6 @@ export namespace price {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/price/${encodeURIComponent(params.mint)}`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_get_getPrice>
-        }
-
-        /**
-         * Gets price data exclusively from Raydium with comprehensive error handling
-         */
-        public async getRaydiumOnlyPrice(params: { mint: string }): Promise<ResponseType<typeof api_price_raydium_only_getRaydiumOnlyPrice>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/${encodeURIComponent(params.mint)}`, {method: "GET", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_getRaydiumOnlyPrice>
-        }
-
-        /**
-         * Health check endpoint for Raydium-only pricing
-         */
-        public async raydiumHealthCheck(): Promise<ResponseType<typeof api_price_raydium_only_raydiumHealthCheck>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/pricing/raydium-only/health`, {method: "GET", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_price_raydium_only_raydiumHealthCheck>
         }
     }
 }

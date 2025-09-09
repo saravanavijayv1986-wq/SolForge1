@@ -1,19 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWallet } from '../providers/WalletProvider';
 import { CreateFairMintForm } from '../components/admin/CreateFairMintForm';
 import { WalletConnectPrompt } from '../components/wallet/WalletConnectPrompt';
-import { ADMIN_WALLET_ADDRESS } from '../config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Shield, Info, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Shield, Info, CheckCircle, Loader2 } from 'lucide-react';
+import backend from '~backend/client';
 
 export function AdminPage() {
   const { connected, publicKey } = useWallet();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      setIsLoading(true);
+      if (connected && publicKey) {
+        try {
+          const res = await backend.fairmint.getAdminWallet();
+          setIsAdmin(publicKey.toString() === res.adminWallet);
+        } catch {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      setIsLoading(false);
+    };
+    checkAdmin();
+  }, [connected, publicKey]);
 
   if (!connected) {
     return <WalletConnectPrompt />;
   }
 
-  const isAdmin = publicKey?.toString() === ADMIN_WALLET_ADDRESS;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Verifying admin access...</span>
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (

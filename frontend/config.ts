@@ -15,9 +15,6 @@ export const APP_CONFIG = {
 // Token creation fee in SOL
 export const TOKEN_CREATION_FEE = 0.1;
 
-// Treasury multisig wallet for SOL fees
-export const ADMIN_WALLET_ADDRESS = "315bW7FbJXyHbYq5ZWJg1TYXinANZqVujzpkiG1LtQji";
-
 // Wallet information
 export const WALLET_INFO = {
   phantom: {

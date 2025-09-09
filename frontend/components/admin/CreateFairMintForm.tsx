@@ -10,7 +10,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Plus, Trash2, AlertTriangle, Info, CheckCircle, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useWallet } from '../../providers/WalletProvider';
-import { ADMIN_WALLET_ADDRESS } from '../../config';
 import backend from '~backend/client';
 
 const acceptedTokenSchema = z.object({
@@ -78,49 +77,26 @@ export function CreateFairMintForm() {
   // Check admin authorization
   useEffect(() => {
     const checkAdminAuth = async () => {
+      setAdminCheckLoading(true);
       try {
         if (!publicKey) {
           setIsAuthorized(false);
-          setAdminCheckLoading(false);
           return;
         }
 
-        // Check if the fairmint service is available on the backend client
-        if (!backend || typeof backend !== 'object') {
-          console.error('Backend client not available');
-          setIsAuthorized(false);
-          setAdminCheckLoading(false);
-          toast({
-            title: "Service Error",
-            description: "Backend client is not available. Please check if the backend is running.",
-            variant: "destructive",
-          });
-          return;
+        if (!backend.fairmint || typeof backend.fairmint.getAdminWallet !== 'function') {
+          throw new Error("Admin verification service is not available.");
         }
 
-        // For now, use the hardcoded admin wallet from config
-        // This bypasses the backend call that's causing issues
-        const expectedAdminWallet = ADMIN_WALLET_ADDRESS;
-        setAdminWallet(expectedAdminWallet);
-        setIsAuthorized(publicKey.toString() === expectedAdminWallet);
-
-        // Try to call the backend service if available
-        try {
-          if (backend.fairmint && typeof backend.fairmint.getAdminWallet === 'function') {
-            const response = await backend.fairmint.getAdminWallet();
-            setAdminWallet(response.adminWallet);
-            setIsAuthorized(publicKey.toString() === response.adminWallet);
-          }
-        } catch (error) {
-          console.warn('Could not fetch admin wallet from backend, using config value:', error);
-          // Continue with config-based auth check
-        }
+        const response = await backend.fairmint.getAdminWallet();
+        setAdminWallet(response.adminWallet);
+        setIsAuthorized(publicKey.toString() === response.adminWallet);
       } catch (error) {
         console.error('Failed to check admin authorization:', error);
         setIsAuthorized(false);
         toast({
           title: "Authorization Check Failed",
-          description: "Could not verify admin status. Please try refreshing the page.",
+          description: error instanceof Error ? error.message : "Could not verify admin status. Please try refreshing the page.",
           variant: "destructive",
         });
       } finally {

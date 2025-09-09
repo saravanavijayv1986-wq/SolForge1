@@ -58,8 +58,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
       }
 
       if (req.adminWallet !== expectedAdminWallet) {
-        console.warn(`Unauthorized admin access attempt from: ${req.adminWallet}`);
-        console.warn(`Expected admin wallet: ${expectedAdminWallet}`);
+        console.warn(`Unauthorized admin access attempt from: ${req.adminWallet.slice(0, 8)}...`);
+        console.warn(`Expected admin wallet: ${expectedAdminWallet.slice(0, 8)}...`);
         throw APIError.permissionDenied("You are not authorized to create a fair mint event.");
       }
 
@@ -82,7 +82,7 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
 
       // Validate token addresses
       for (const token of req.acceptedTokens) {
-        if (!token.mintAddress || token.mintAddress.length < 32) {
+        if (!token.mintAddress || token.mintAddress.trim().length < 32) {
           throw APIError.invalidArgument(`Invalid mint address for token ${token.tokenSymbol}`);
         }
 
@@ -96,20 +96,20 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
       }
 
       // Validate treasury address
-      if (!req.treasuryAddress || req.treasuryAddress.length < 32) {
+      if (!req.treasuryAddress || req.treasuryAddress.trim().length < 32) {
         throw APIError.invalidArgument("Valid treasury address is required.");
       }
 
       // Hardcoded values
       const description = "A 72-hour Fair Mint where users burn admin-approved SPL tokens (no LPs) and receive SOLF pro-rata by USD value at burn time. No presale, no insiders.";
-      const tgePercentage = 20;
-      const vestingDays = 30;
-      const platformFeeBps = 150;
+      const tgePercentage = "20";
+      const vestingDays = "30";
+      const platformFeeBps = "150";
       const maxPerWalletUsd = "5000";
       const maxPerTxUsd = "2500";
-      const quoteTtlSeconds = 90;
+      const quoteTtlSeconds = "90";
       const minTxUsd = "20";
-      const referralPoolPercentage = 3;
+      const referralPoolPercentage = "3";
       const dailyCapUsd = "250000";
 
       // 3. Start DB transaction
@@ -127,9 +127,9 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
             max_per_tx_usd, quote_ttl_seconds, min_tx_usd, treasury_address,
             referral_pool_percentage
           ) VALUES (
-            ${req.eventName}, ${description}, ${req.startTime}, ${req.endTime}, true,
-            ${tgePercentage}, ${vestingDays}, ${platformFeeBps}, ${maxPerWalletUsd}::numeric,
-            ${maxPerTxUsd}::numeric, ${quoteTtlSeconds}, ${minTxUsd}::numeric, ${req.treasuryAddress},
+            ${req.eventName.trim()}, ${description}, ${req.startTime.toISOString()}, ${req.endTime.toISOString()}, true,
+            ${tgePercentage}, ${vestingDays}, ${platformFeeBps}, ${maxPerWalletUsd},
+            ${maxPerTxUsd}, ${quoteTtlSeconds}, ${minTxUsd}, ${req.treasuryAddress},
             ${referralPoolPercentage}
           )
           RETURNING 
@@ -164,8 +164,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
               event_id, mint_address, token_name, token_symbol, token_logo_url,
               daily_cap_usd, dex_price_source
             ) VALUES (
-              ${event.id}, ${token.mintAddress}, ${token.tokenName.trim()}, ${token.tokenSymbol.trim().toUpperCase()}, null,
-              ${dailyCapUsd}::numeric, null
+              ${event.id}, ${token.mintAddress.trim()}, ${token.tokenName.trim()}, ${token.tokenSymbol.trim().toUpperCase()}, null,
+              ${dailyCapUsd}, null
             )
             RETURNING
               id, event_id as "eventId", mint_address as "mintAddress",
@@ -183,7 +183,7 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
         }
 
         // 7. Log the event creation
-        console.log(`Fair mint event created: "${event.eventName}" with ${acceptedTokens.length} tokens by admin ${req.adminWallet}`);
+        console.log(`Fair mint event created: "${event.eventName}" with ${acceptedTokens.length} tokens by admin ${req.adminWallet.slice(0, 8)}...`);
 
         // 8. Commit transaction is handled by `await using`
         return { event, acceptedTokens };
@@ -244,7 +244,7 @@ export const pauseEvent = api<{ adminWallet: string; eventId: number; reason?: s
       VALUES (${req.eventId}, 'pause', ${req.reason || 'Manual pause'}, ${req.adminWallet})
     `;
 
-    console.log(`Event ${req.eventId} paused by admin ${req.adminWallet}: ${req.reason || 'No reason provided'}`);
+    console.log(`Event ${req.eventId} paused by admin ${req.adminWallet.slice(0, 8)}...: ${req.reason || 'No reason provided'}`);
 
     return { success: true };
   }
@@ -276,7 +276,7 @@ export const resumeEvent = api<{ adminWallet: string; eventId: number; reason?: 
       VALUES (${req.eventId}, 'resume', ${req.reason || 'Manual resume'}, ${req.adminWallet})
     `;
 
-    console.log(`Event ${req.eventId} resumed by admin ${req.adminWallet}: ${req.reason || 'No reason provided'}`);
+    console.log(`Event ${req.eventId} resumed by admin ${req.adminWallet.slice(0, 8)}...: ${req.reason || 'No reason provided'}`);
 
     return { success: true };
   }

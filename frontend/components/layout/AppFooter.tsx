@@ -1,11 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { APP_CONFIG, ADMIN_WALLET_ADDRESS } from '../../config';
+import { APP_CONFIG } from '../../config';
 import { useWallet } from '../../providers/WalletProvider';
+import backend from '~backend/client';
 
 export function AppFooter() {
-  const { publicKey } = useWallet();
-  const isAdmin = publicKey?.toString() === ADMIN_WALLET_ADDRESS;
+  const { connected, publicKey } = useWallet();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (connected && publicKey) {
+        try {
+          const res = await backend.fairmint.getAdminWallet();
+          setIsAdmin(publicKey.toString() === res.adminWallet);
+        } catch {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    checkAdmin();
+  }, [connected, publicKey]);
 
   return (
     <footer className="bg-background border-t border-border">
