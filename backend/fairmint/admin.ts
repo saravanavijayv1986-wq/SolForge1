@@ -9,27 +9,15 @@ interface AcceptedTokenRequest {
   mintAddress: string;
   tokenName: string;
   tokenSymbol: string;
-  tokenLogoUrl?: string;
-  dailyCapUsd: string;
-  dexPriceSource?: string;
 }
 
 interface CreateFairMintEventRequest {
   adminWallet: string;
   eventName: string;
-  description?: string;
   startTime: Date;
   endTime: Date;
   acceptedTokens: AcceptedTokenRequest[];
-  tgePercentage: number;
-  vestingDays: number;
-  platformFeeBps: number;
-  maxPerWalletUsd: string;
-  maxPerTxUsd: string;
-  quoteTtlSeconds: number;
-  minTxUsd: string;
   treasuryAddress: string;
-  referralPoolPercentage: number;
 }
 
 interface CreateFairMintEventResponse {
@@ -92,23 +80,6 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
         throw APIError.invalidArgument("Maximum 20 accepted tokens allowed.");
       }
 
-      // Validate percentages and numbers
-      if (req.tgePercentage < 0 || req.tgePercentage > 100) {
-        throw APIError.invalidArgument("TGE percentage must be between 0 and 100.");
-      }
-
-      if (req.vestingDays < 1 || req.vestingDays > 365) {
-        throw APIError.invalidArgument("Vesting days must be between 1 and 365.");
-      }
-
-      if (req.platformFeeBps < 0 || req.platformFeeBps > 1000) {
-        throw APIError.invalidArgument("Platform fee must be between 0 and 10% (1000 bps).");
-      }
-
-      if (req.referralPoolPercentage < 0 || req.referralPoolPercentage > 20) {
-        throw APIError.invalidArgument("Referral pool percentage must be between 0 and 20%.");
-      }
-
       // Validate token addresses
       for (const token of req.acceptedTokens) {
         if (!token.mintAddress || token.mintAddress.length < 32) {
@@ -122,42 +93,24 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
         if (!token.tokenSymbol || token.tokenSymbol.trim().length === 0) {
           throw APIError.invalidArgument("Token symbol is required for all tokens");
         }
-
-        const dailyCapUsdNum = parseFloat(token.dailyCapUsd);
-        if (isNaN(dailyCapUsdNum) || dailyCapUsdNum <= 0) {
-          throw APIError.invalidArgument(`Invalid daily cap for token ${token.tokenSymbol}`);
-        }
-      }
-
-      // Validate USD amounts
-      const maxPerWalletUsdNum = parseFloat(req.maxPerWalletUsd);
-      const maxPerTxUsdNum = parseFloat(req.maxPerTxUsd);
-      const minTxUsdNum = parseFloat(req.minTxUsd);
-
-      if (isNaN(maxPerWalletUsdNum) || maxPerWalletUsdNum <= 0) {
-        throw APIError.invalidArgument("Invalid max per wallet USD amount.");
-      }
-
-      if (isNaN(maxPerTxUsdNum) || maxPerTxUsdNum <= 0) {
-        throw APIError.invalidArgument("Invalid max per transaction USD amount.");
-      }
-
-      if (isNaN(minTxUsdNum) || minTxUsd < 0) {
-        throw APIError.invalidArgument("Invalid minimum transaction USD amount.");
-      }
-
-      if (maxPerTxUsdNum > maxPerWalletUsdNum) {
-        throw APIError.invalidArgument("Max per transaction cannot exceed max per wallet.");
-      }
-
-      if (minTxUsdNum > maxPerTxUsdNum) {
-        throw APIError.invalidArgument("Minimum transaction cannot exceed maximum transaction.");
       }
 
       // Validate treasury address
       if (!req.treasuryAddress || req.treasuryAddress.length < 32) {
         throw APIError.invalidArgument("Valid treasury address is required.");
       }
+
+      // Hardcoded values
+      const description = "A 72-hour Fair Mint where users burn admin-approved SPL tokens (no LPs) and receive SOLF pro-rata by USD value at burn time. No presale, no insiders.";
+      const tgePercentage = 20;
+      const vestingDays = 30;
+      const platformFeeBps = 150;
+      const maxPerWalletUsd = "5000";
+      const maxPerTxUsd = "2500";
+      const quoteTtlSeconds = 90;
+      const minTxUsd = "20";
+      const referralPoolPercentage = 3;
+      const dailyCapUsd = "250000";
 
       // 3. Start DB transaction
       await using tx = await fairMintDB.begin();
@@ -174,10 +127,10 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
             max_per_tx_usd, quote_ttl_seconds, min_tx_usd, treasury_address,
             referral_pool_percentage
           ) VALUES (
-            ${req.eventName}, ${req.description || null}, ${req.startTime}, ${req.endTime}, true,
-            ${req.tgePercentage}, ${req.vestingDays}, ${req.platformFeeBps}, ${req.maxPerWalletUsd}::numeric,
-            ${req.maxPerTxUsd}::numeric, ${req.quoteTtlSeconds}, ${req.minTxUsd}::numeric, ${req.treasuryAddress},
-            ${req.referralPoolPercentage}
+            ${req.eventName}, ${description}, ${req.startTime}, ${req.endTime}, true,
+            ${tgePercentage}, ${vestingDays}, ${platformFeeBps}, ${maxPerWalletUsd}::numeric,
+            ${maxPerTxUsd}::numeric, ${quoteTtlSeconds}, ${minTxUsd}::numeric, ${req.treasuryAddress},
+            ${referralPoolPercentage}
           )
           RETURNING 
             id, event_name as "eventName", description, start_time as "startTime", 
@@ -211,8 +164,8 @@ export const createEvent = api<CreateFairMintEventRequest, CreateFairMintEventRe
               event_id, mint_address, token_name, token_symbol, token_logo_url,
               daily_cap_usd, dex_price_source
             ) VALUES (
-              ${event.id}, ${token.mintAddress}, ${token.tokenName.trim()}, ${token.tokenSymbol.trim().toUpperCase()}, ${token.tokenLogoUrl || null},
-              ${token.dailyCapUsd}::numeric, ${token.dexPriceSource?.trim() || null}
+              ${event.id}, ${token.mintAddress}, ${token.tokenName.trim()}, ${token.tokenSymbol.trim().toUpperCase()}, null,
+              ${dailyCapUsd}::numeric, null
             )
             RETURNING
               id, event_id as "eventId", mint_address as "mintAddress",

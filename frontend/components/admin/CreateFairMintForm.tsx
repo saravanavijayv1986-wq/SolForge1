@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Plus, Trash2, AlertTriangle, Info, CheckCircle, Shield } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -18,46 +17,22 @@ const acceptedTokenSchema = z.object({
   mintAddress: z.string().min(32, "Valid SPL mint address is required (32+ characters)"),
   tokenName: z.string().min(1, "Token name is required").max(50, "Token name too long"),
   tokenSymbol: z.string().min(1, "Token symbol is required").max(10, "Token symbol too long"),
-  tokenLogoUrl: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
-  dailyCapUsd: z.string().refine(v => !isNaN(parseFloat(v)) && parseFloat(v) > 0 && parseFloat(v) <= 10000000, "Must be between $1 and $10M"),
-  dexPriceSource: z.string().optional(),
 });
 
 const createEventSchema = z.object({
   eventName: z.string().min(1, "Event name is required").max(100, "Event name too long"),
-  description: z.string().max(500, "Description too long").optional(),
   startTime: z.string().min(1, "Start time is required").refine(
     (val) => new Date(val) > new Date(Date.now() + 300000), // At least 5 minutes in the future
     "Start time must be at least 5 minutes in the future"
   ),
   endTime: z.string().min(1, "End time is required"),
   acceptedTokens: z.array(acceptedTokenSchema).min(1, "At least one SPL token is required").max(20, "Maximum 20 tokens allowed"),
-  tgePercentage: z.number().min(0, "Must be 0 or greater").max(100, "Cannot exceed 100%"),
-  vestingDays: z.number().min(1, "Must be at least 1 day").max(365, "Cannot exceed 365 days").int("Must be a whole number"),
-  platformFeeBps: z.number().min(0, "Must be 0 or greater").max(1000, "Cannot exceed 10% (1000 bps)").int("Must be a whole number"),
-  maxPerWalletUsd: z.string().refine(v => !isNaN(parseFloat(v)) && parseFloat(v) > 0, "Must be a positive number"),
-  maxPerTxUsd: z.string().refine(v => !isNaN(parseFloat(v)) && parseFloat(v) > 0, "Must be a positive number"),
-  quoteTtlSeconds: z.number().min(30, "Must be at least 30 seconds").max(300, "Cannot exceed 5 minutes").int("Must be a whole number"),
-  minTxUsd: z.string().refine(v => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, "Must be a non-negative number"),
   treasuryAddress: z.string().min(32, "Valid Solana address required (32+ characters)"),
-  referralPoolPercentage: z.number().min(0, "Must be 0 or greater").max(20, "Cannot exceed 20%"),
 }).refine(
   (data) => new Date(data.startTime) < new Date(data.endTime),
   {
     message: "End time must be after start time",
     path: ["endTime"],
-  }
-).refine(
-  (data) => parseFloat(data.maxPerTxUsd) <= parseFloat(data.maxPerWalletUsd),
-  {
-    message: "Max per transaction cannot exceed max per wallet",
-    path: ["maxPerTxUsd"],
-  }
-).refine(
-  (data) => parseFloat(data.minTxUsd) <= parseFloat(data.maxPerTxUsd),
-  {
-    message: "Minimum transaction cannot exceed maximum transaction",
-    path: ["minTxUsd"],
   }
 );
 
@@ -83,22 +58,11 @@ export function CreateFairMintForm() {
     resolver: zodResolver(createEventSchema),
     defaultValues: {
       eventName: "SOLF Proof-of-Burn Fair Mint",
-      description: "A 72-hour Fair Mint where users burn admin-approved SPL tokens (no LPs) and receive SOLF pro-rata by USD value at burn time. No presale, no insiders.",
-      tgePercentage: 20,
-      vestingDays: 30,
-      platformFeeBps: 150,
-      maxPerWalletUsd: "5000",
-      maxPerTxUsd: "2500",
-      quoteTtlSeconds: 90,
-      minTxUsd: "20",
-      referralPoolPercentage: 3,
       acceptedTokens: [
         { 
           mintAddress: "", 
           tokenName: "", 
           tokenSymbol: "", 
-          dailyCapUsd: "250000",
-          dexPriceSource: ""
         }
       ]
     },
@@ -229,26 +193,14 @@ export function CreateFairMintForm() {
       const payload = {
         adminWallet: publicKey.toString(),
         eventName: data.eventName.trim(),
-        description: data.description?.trim(),
         startTime: new Date(data.startTime),
         endTime: new Date(data.endTime),
         acceptedTokens: data.acceptedTokens.map(token => ({
           mintAddress: token.mintAddress.trim(),
           tokenName: token.tokenName.trim(),
           tokenSymbol: token.tokenSymbol.trim().toUpperCase(),
-          tokenLogoUrl: token.tokenLogoUrl?.trim() || undefined,
-          dailyCapUsd: String(token.dailyCapUsd), // Ensure string
-          dexPriceSource: token.dexPriceSource?.trim() || undefined,
         })),
-        tgePercentage: data.tgePercentage,
-        vestingDays: data.vestingDays,
-        platformFeeBps: data.platformFeeBps,
-        maxPerWalletUsd: String(data.maxPerWalletUsd), // Ensure string
-        maxPerTxUsd: String(data.maxPerTxUsd),       // Ensure string
-        quoteTtlSeconds: data.quoteTtlSeconds,
-        minTxUsd: String(data.minTxUsd),             // Ensure string
         treasuryAddress: data.treasuryAddress.trim(),
-        referralPoolPercentage: data.referralPoolPercentage,
       };
 
       // Check if backend service is available before calling
@@ -354,13 +306,13 @@ export function CreateFairMintForm() {
                 {errors.eventName && <p className="text-sm text-destructive">{errors.eventName.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description" 
-                  {...register('description')}
-                  className={errors.description ? 'border-destructive' : ''}
+                <Label htmlFor="treasuryAddress">Treasury Address *</Label>
+                <Input 
+                  {...register('treasuryAddress')} 
+                  placeholder="Solana wallet address"
+                  className={errors.treasuryAddress ? 'border-destructive' : ''}
                 />
-                {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+                {errors.treasuryAddress && <p className="text-sm text-destructive">{errors.treasuryAddress.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="startTime">Start Time (Local) *</Label>
@@ -465,36 +417,6 @@ export function CreateFairMintForm() {
                       <p className="text-sm text-destructive">{errors.acceptedTokens[index]?.tokenSymbol?.message}</p>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Logo URL (optional)</Label>
-                    <Input 
-                      {...register(`acceptedTokens.${index}.tokenLogoUrl`)} 
-                      placeholder="https://..."
-                      className={errors.acceptedTokens?.[index]?.tokenLogoUrl ? 'border-destructive' : ''}
-                    />
-                    {errors.acceptedTokens?.[index]?.tokenLogoUrl && (
-                      <p className="text-sm text-destructive">{errors.acceptedTokens[index]?.tokenLogoUrl?.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Daily Cap (USD) *</Label>
-                    <Input 
-                      type="number" 
-                      {...register(`acceptedTokens.${index}.dailyCapUsd`)} 
-                      placeholder="250000"
-                      className={errors.acceptedTokens?.[index]?.dailyCapUsd ? 'border-destructive' : ''}
-                    />
-                    {errors.acceptedTokens?.[index]?.dailyCapUsd && (
-                      <p className="text-sm text-destructive">{errors.acceptedTokens[index]?.dailyCapUsd?.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>DEX Price Source (optional)</Label>
-                    <Input 
-                      {...register(`acceptedTokens.${index}.dexPriceSource`)} 
-                      placeholder="jupiter, raydium, etc."
-                    />
-                  </div>
                 </div>
               </div>
             ))}
@@ -505,109 +427,12 @@ export function CreateFairMintForm() {
                 mintAddress: "", 
                 tokenName: "", 
                 tokenSymbol: "", 
-                dailyCapUsd: "250000",
-                dexPriceSource: ""
               })}
               disabled={fields.length >= 20}
             >
               <Plus className="mr-2 h-4 w-4" /> Add SPL Token ({fields.length}/20)
             </Button>
             {errors.acceptedTokens && <p className="text-sm text-destructive">{errors.acceptedTokens.message}</p>}
-          </div>
-
-          {/* Burn Limits & Caps */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Burn Limits & Caps</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Max Per Wallet (USD) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('maxPerWalletUsd')}
-                  className={errors.maxPerWalletUsd ? 'border-destructive' : ''}
-                />
-                {errors.maxPerWalletUsd && <p className="text-sm text-destructive">{errors.maxPerWalletUsd.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Max Per Transaction (USD) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('maxPerTxUsd')}
-                  className={errors.maxPerTxUsd ? 'border-destructive' : ''}
-                />
-                {errors.maxPerTxUsd && <p className="text-sm text-destructive">{errors.maxPerTxUsd.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Min Per Transaction (USD) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('minTxUsd')}
-                  className={errors.minTxUsd ? 'border-destructive' : ''}
-                />
-                {errors.minTxUsd && <p className="text-sm text-destructive">{errors.minTxUsd.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Quote TTL (seconds) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('quoteTtlSeconds', { valueAsNumber: true })}
-                  className={errors.quoteTtlSeconds ? 'border-destructive' : ''}
-                />
-                {errors.quoteTtlSeconds && <p className="text-sm text-destructive">{errors.quoteTtlSeconds.message}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Tokenomics & Vesting */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Tokenomics & Vesting</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>TGE Release (%) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('tgePercentage', { valueAsNumber: true })}
-                  className={errors.tgePercentage ? 'border-destructive' : ''}
-                />
-                {errors.tgePercentage && <p className="text-sm text-destructive">{errors.tgePercentage.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Vesting Period (days) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('vestingDays', { valueAsNumber: true })}
-                  className={errors.vestingDays ? 'border-destructive' : ''}
-                />
-                {errors.vestingDays && <p className="text-sm text-destructive">{errors.vestingDays.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Platform Fee (bps) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('platformFeeBps', { valueAsNumber: true })}
-                  className={errors.platformFeeBps ? 'border-destructive' : ''}
-                />
-                {errors.platformFeeBps && <p className="text-sm text-destructive">{errors.platformFeeBps.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Referral Pool (%) *</Label>
-                <Input 
-                  type="number" 
-                  {...register('referralPoolPercentage', { valueAsNumber: true })}
-                  className={errors.referralPoolPercentage ? 'border-destructive' : ''}
-                />
-                {errors.referralPoolPercentage && <p className="text-sm text-destructive">{errors.referralPoolPercentage.message}</p>}
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Treasury Address *</Label>
-                <Input 
-                  {...register('treasuryAddress')} 
-                  placeholder="Solana wallet address"
-                  className={errors.treasuryAddress ? 'border-destructive' : ''}
-                />
-                {errors.treasuryAddress && <p className="text-sm text-destructive">{errors.treasuryAddress.message}</p>}
-              </div>
-            </div>
           </div>
 
           {/* Launch Warning */}
@@ -620,8 +445,6 @@ export function CreateFairMintForm() {
                   <div className="text-sm text-amber-700 dark:text-amber-300 mt-2 space-y-1">
                     <p>• All SPL tokens verified and price feeds configured</p>
                     <p>• Treasury address confirmed and secure</p>
-                    <p>• Quote TTL and caps appropriate for expected volume</p>
-                    <p>• Emergency pause functionality tested</p>
                     <p>• All existing active events will be deactivated</p>
                     <p>• Start time must be at least 5 minutes in the future</p>
                   </div>
