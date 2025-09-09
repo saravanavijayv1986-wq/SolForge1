@@ -4,54 +4,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
-import { useWallet } from '../../providers/WalletProvider';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { NETWORK_CONFIG } from '../../config';
 import { parseSolanaError, formatSolanaError, withRetry } from '../../utils/solana-errors';
-import backend from '~backend/client';
 
 export function WalletBalance() {
-  const { publicKey, connected, connection } = useWallet();
+  const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
 
   const { data: balance, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['walletBalance', publicKey?.toString()],
     queryFn: async () => {
       if (!publicKey) return null;
       
-      // Try backend first, with fallback to direct connection
-      try {
-        const response = await backend.wallet.getBalance({
-          walletAddress: publicKey.toString()
-        });
-        return response;
-      } catch (backendError) {
-        console.warn('Backend balance check failed, trying direct connection:', backendError);
-        
-        // Fallback to direct Solana connection with retry logic
-        try {
-          const balanceInLamports = await withRetry(async () => {
-            return await connection.getBalance(publicKey, 'confirmed');
-          }, 3, 1000);
-          
-          return {
-            balance: (balanceInLamports / 1e9).toString(),
-            lamports: balanceInLamports.toString(),
-            lastUpdated: Date.now()
-          };
-        } catch (directError) {
-          // If both methods fail, throw the original backend error
-          throw backendError;
-        }
-      }
+      const balanceInLamports = await withRetry(async () => {
+        return await connection.getBalance(publicKey, 'confirmed');
+      }, 3, 1000);
+      
+      return {
+        balance: (balanceInLamports / 1e9).toString(),
+        lamports: balanceInLamports.toString(),
+        lastUpdated: Date.now()
+      };
     },
     enabled: connected && !!publicKey,
     refetchInterval: 30000, // Refresh every 30 seconds
     retry: (failureCount, error) => {
       const solanaError = parseSolanaError(error);
-      // Don't retry on certain error types
       if (solanaError.code === 'INVALID_ADDRESS') {
         return false;
       }
-      return failureCount < 2; // Reduced retries since we have fallback logic
+      return failureCount < 2;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });

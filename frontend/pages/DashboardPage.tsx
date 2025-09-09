@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Wallet, AlertCircle, Coins, TrendingUp } from 'lucide-react';
-import { useWallet } from '../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { TokenList } from '../components/token/TokenList';
 import { WalletConnectPrompt } from '../components/wallet/WalletConnectPrompt';
 import { WalletBalance } from '../components/wallet/WalletBalance';
@@ -33,7 +33,7 @@ export function DashboardPage() {
             <Button asChild className="flex items-center space-x-2">
               <Link to="/create">
                 <Plus className="h-4 w-4" />
-                <span>Create New Token ({TOKEN_CREATION_FEE} SOL)</span>
+                <span>Create New Token</span>
               </Link>
             </Button>
           </div>

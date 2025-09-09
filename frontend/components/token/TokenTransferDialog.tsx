@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Send, AlertTriangle } from 'lucide-react';
-import { useWallet } from '../../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import backend from '~backend/client';
 
 const transferSchema = z.object({

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { History, ExternalLink, Copy, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useWallet } from '../../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import backend from '~backend/client';
 import type { PurchaseRecord } from '~backend/launchpad/stats';
 

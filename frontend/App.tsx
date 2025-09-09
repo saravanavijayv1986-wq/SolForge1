@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WalletProvider } from './providers/WalletProvider';
 import { Toaster } from '@/components/ui/toaster';
 import { AppHeader } from './components/layout/AppHeader';
 import { AppFooter } from './components/layout/AppFooter';
@@ -10,6 +9,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { CreateTokenPage } from './pages/CreateTokenPage';
 import { LaunchpadPage } from './pages/LaunchpadPage';
 import { RoadmapPage } from './pages/RoadmapPage';
+import { SolanaProviders } from './providers/SolanaProviders';
+import '@solana/wallet-adapter-react-ui/styles.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,11 +43,11 @@ function AppInner() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WalletProvider>
+      <SolanaProviders>
         <Router>
           <AppInner />
         </Router>
-      </WalletProvider>
+      </SolanaProviders>
     </QueryClientProvider>
   );
 }

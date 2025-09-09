@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Settings } from 'lucide-react';
-import { useWallet } from '../../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import backend from '~backend/client';
 
 interface TokenManageDialogProps {

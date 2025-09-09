@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWallet } from '../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletConnectPrompt } from '../components/wallet/WalletConnectPrompt';
 import { WalletBalance } from '../components/wallet/WalletBalance';
 import { SOLFPurchaseForm } from '../components/launchpad/SOLFPurchaseForm';

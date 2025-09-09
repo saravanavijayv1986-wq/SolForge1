@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Wallet, Home, Plus, BarChart3, Map, Rocket } from 'lucide-react';
-import { useWallet } from '../../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletButton } from '../wallet/WalletButton';
 import { APP_CONFIG } from '../../config';
 

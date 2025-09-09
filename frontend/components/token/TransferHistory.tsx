@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { History, ArrowUpRight, ArrowDownLeft, Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useWallet } from '../../providers/WalletProvider';
+import { useWallet } from '@solana/wallet-adapter-react';
 import backend from '~backend/client';
 import type { TransferRecord } from '~backend/token/transfer';
 
