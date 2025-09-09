@@ -127,7 +127,7 @@ export function SOLFPurchaseForm() {
       setProcessingPurchase(true);
 
       // Wait for confirmation with retry logic
-      await connection.confirmTransaction(txSig, 'confirmed');
+      await connection.confirmTransaction({ signature: txSig, ...(await connection.getLatestBlockhash()) }, 'confirmed');
 
       // Process purchase through backend
       const response = await backend.launchpad.buy({
