@@ -6,17 +6,7 @@ CREATE TABLE IF NOT EXISTS tokens (
   decimals INTEGER NOT NULL CHECK (decimals >= 0 AND decimals <= 9),
   supply NUMERIC(38,18) NOT NULL,
   description TEXT,
-  logo_url TEXT,
-  metadata_url TEXT,
   creator_wallet TEXT NOT NULL,
-  total_minted NUMERIC(38,18) DEFAULT '0',
-  is_mintable BOOLEAN DEFAULT true,
-  is_frozen BOOLEAN DEFAULT false,
-  mint_authority TEXT,
-  freeze_authority TEXT,
-  fee_transaction_signature TEXT,
-  image_transaction_id TEXT,
-  metadata_transaction_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -26,7 +16,6 @@ CREATE INDEX IF NOT EXISTS idx_tokens_mint_address ON tokens(mint_address);
 CREATE INDEX IF NOT EXISTS idx_tokens_created_at ON tokens(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tokens_symbol ON tokens(symbol);
 CREATE INDEX IF NOT EXISTS idx_tokens_name ON tokens(name);
-CREATE INDEX IF NOT EXISTS idx_tokens_fee_signature ON tokens(fee_transaction_signature);
 
 -- Add trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -12,8 +12,6 @@ export interface CreateTokenRequest {
   metadataUrl?: string;
   creatorWallet: string;
   feeTransactionSignature?: string;
-  imageTransactionId?: string;
-  metadataTransactionId?: string;
 }
 
 export interface CreateTokenResponse {
@@ -86,8 +84,6 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
         metadataUrl: req.metadataUrl?.trim() || null,
         creatorWallet: req.creatorWallet.trim(),
         feeTransactionSignature: req.feeTransactionSignature?.trim() || null,
-        imageTransactionId: req.imageTransactionId?.trim() || null,
-        metadataTransactionId: req.metadataTransactionId?.trim() || null
       };
 
       console.log("Cleaned token data:", cleanedData);
@@ -125,8 +121,6 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
           metadata_url,
           creator_wallet,
           fee_transaction_signature,
-          image_transaction_id,
-          metadata_transaction_id,
           total_minted,
           is_mintable,
           is_frozen
@@ -142,8 +136,6 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
           ${cleanedData.metadataUrl},
           ${cleanedData.creatorWallet},
           ${cleanedData.feeTransactionSignature},
-          ${cleanedData.imageTransactionId},
-          ${cleanedData.metadataTransactionId},
           '0'::numeric,
           true,
           false

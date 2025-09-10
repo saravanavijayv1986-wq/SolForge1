@@ -1,4 +1,4 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
 import { launchpadDB } from "./db";
 
 export interface LaunchpadStats {
@@ -24,7 +24,7 @@ export const getStats = api<void, LaunchpadStats>(
         console.log("Launchpad database connection test successful");
       } catch (dbError) {
         console.error("Launchpad database connection test failed:", dbError);
-        throw new Error("Database is currently unavailable");
+        throw APIError.unavailable("Database is currently unavailable", { originalError: dbError instanceof Error ? dbError.message : String(dbError) });
       }
 
       // Use simpler query with explicit type casting
@@ -62,21 +62,10 @@ export const getStats = api<void, LaunchpadStats>(
 
     } catch (error) {
       console.error("Launchpad stats error:", error);
-      
-      if (error instanceof Error) {
-        const errorMessage = error.message.toLowerCase();
-        
-        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
-          throw new Error("Database connection failed");
-        }
-
-        if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-          console.error("Launchpad table missing:", error.message);
-          throw new Error("Launchpad database not properly initialized");
-        }
+      if (error instanceof APIError) {
+        throw error;
       }
-      
-      throw new Error("Failed to retrieve launchpad statistics");
+      throw APIError.internal("Failed to retrieve launchpad statistics", { originalError: error instanceof Error ? error.message : String(error) });
     }
   }
 );
@@ -114,7 +103,7 @@ export const getUserHistory = api<GetUserHistoryRequest, UserPurchaseHistory>(
 
       // Validate input
       if (!req.wallet || typeof req.wallet !== 'string' || req.wallet.trim().length === 0) {
-        throw new Error("Wallet address is required");
+        throw APIError.invalidArgument("Wallet address is required");
       }
 
       const limit = Math.min(Math.max(req.limit || 20, 1), 100);
@@ -127,7 +116,7 @@ export const getUserHistory = api<GetUserHistoryRequest, UserPurchaseHistory>(
         console.log("Database connection test successful");
       } catch (dbError) {
         console.error("Database connection test failed:", dbError);
-        throw new Error("Database is currently unavailable");
+        throw APIError.unavailable("Database is currently unavailable", { originalError: dbError instanceof Error ? dbError.message : String(dbError) });
       }
 
       const [purchases, summary] = await Promise.all([
@@ -175,21 +164,10 @@ export const getUserHistory = api<GetUserHistoryRequest, UserPurchaseHistory>(
 
     } catch (error) {
       console.error("User history error:", error);
-      
-      if (error instanceof Error) {
-        const errorMessage = error.message.toLowerCase();
-        
-        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
-          throw new Error("Database connection failed");
-        }
-
-        if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-          console.error("Launchpad table missing:", error.message);
-          throw new Error("Launchpad database not properly initialized");
-        }
+      if (error instanceof APIError) {
+        throw error;
       }
-      
-      throw new Error("Failed to retrieve user purchase history");
+      throw APIError.internal("Failed to retrieve user purchase history", { originalError: error instanceof Error ? error.message : String(error) });
     }
   }
 );
@@ -220,7 +198,7 @@ export const getRecentPurchases = api<GetRecentPurchasesRequest, RecentPurchases
         console.log("Database connection test successful");
       } catch (dbError) {
         console.error("Database connection test failed:", dbError);
-        throw new Error("Database is currently unavailable");
+        throw APIError.unavailable("Database is currently unavailable", { originalError: dbError instanceof Error ? dbError.message : String(dbError) });
       }
 
       const [purchases, countResult] = await Promise.all([
@@ -252,21 +230,10 @@ export const getRecentPurchases = api<GetRecentPurchasesRequest, RecentPurchases
 
     } catch (error) {
       console.error("Recent purchases error:", error);
-      
-      if (error instanceof Error) {
-        const errorMessage = error.message.toLowerCase();
-        
-        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
-          throw new Error("Database connection failed");
-        }
-
-        if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-          console.error("Launchpad table missing:", error.message);
-          throw new Error("Launchpad database not properly initialized");
-        }
+      if (error instanceof APIError) {
+        throw error;
       }
-      
-      throw new Error("Failed to retrieve recent purchases");
+      throw APIError.internal("Failed to retrieve recent purchases", { originalError: error instanceof Error ? error.message : String(error) });
     }
   }
 );

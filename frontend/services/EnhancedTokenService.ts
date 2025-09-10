@@ -217,8 +217,6 @@ export function useEnhancedTokenService() {
             logoUrl: logoUrl,
             creatorWallet: publicKey.toString(),
             feeTransactionSignature: signature,
-            imageTransactionId: undefined, // No longer using Arweave but field exists
-            metadataTransactionId: undefined, // No longer using Arweave but field exists
           });
         } catch (dbError) {
           console.warn('Failed to store token in database:', dbError);

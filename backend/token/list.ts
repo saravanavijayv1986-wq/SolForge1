@@ -1,4 +1,4 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
 import { Query } from "encore.dev/api";
 import { tokenDB } from "./db";
 
@@ -49,7 +49,7 @@ export const list = api<ListTokensRequest, ListTokensResponse>(
         console.log("Database connection test successful");
       } catch (dbError) {
         console.error("Database connection test failed:", dbError);
-        throw new Error("Database is currently unavailable");
+        throw APIError.unavailable("Database is currently unavailable", { originalError: dbError instanceof Error ? dbError.message : String(dbError) });
       }
 
       // Simple query without complex joins initially
@@ -117,26 +117,10 @@ export const list = api<ListTokensRequest, ListTokensResponse>(
 
     } catch (error) {
       console.error("Token list error:", error);
-      
-      if (error instanceof Error) {
-        const errorMessage = error.message.toLowerCase();
-        
-        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
-          throw new Error("Database connection failed");
-        }
-        
-        if (errorMessage.includes('syntax error') || errorMessage.includes('column')) {
-          console.error("Database query error:", error.message);
-          throw new Error("Database query failed");
-        }
-
-        if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-          console.error("Database table missing:", error.message);
-          throw new Error("Database not properly initialized");
-        }
+      if (error instanceof APIError) {
+        throw error;
       }
-      
-      throw new Error("Failed to retrieve tokens");
+      throw APIError.internal("Failed to retrieve tokens", { originalError: error instanceof Error ? error.message : String(error) });
     }
   }
 );
