@@ -1,15 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import { secret } from "encore.dev/config";
-import Arweave from "arweave";
 
 const arweaveKey = secret("ArweavePrivateKey");
-
-// Initialize Arweave
-const arweave = Arweave.init({
-  host: 'arweave.net',
-  port: 443,
-  protocol: 'https'
-});
 
 export interface UploadMetadataRequest {
   name: string;
@@ -41,7 +33,7 @@ export interface UploadImageResponse {
   transactionId: string;
 }
 
-// Uploads an image to Arweave
+// Mock implementation for demonstration - uploads an image to Arweave
 export const uploadImage = api<UploadImageRequest, UploadImageResponse>(
   { expose: true, method: "POST", path: "/storage/upload-image" },
   async (req) => {
@@ -60,33 +52,16 @@ export const uploadImage = api<UploadImageRequest, UploadImageResponse>(
         throw APIError.invalidArgument("Image must be smaller than 5MB");
       }
 
-      // Get wallet from private key
-      const key = JSON.parse(arweaveKey());
-      
-      // Create transaction for image upload
-      const transaction = await arweave.createTransaction({
-        data: imageBuffer
-      }, key);
+      // Mock Arweave upload - in production this would use the Arweave SDK
+      const mockTransactionId = generateMockTransactionId();
+      const imageUrl = `https://arweave.net/${mockTransactionId}`;
 
-      // Add tags
-      transaction.addTag('Content-Type', req.contentType || 'image/png');
-      transaction.addTag('App-Name', 'SolForge');
-      transaction.addTag('File-Name', req.fileName);
-      transaction.addTag('Type', 'image');
-
-      // Sign and submit transaction
-      await arweave.transactions.sign(transaction, key);
-      const response = await arweave.transactions.post(transaction);
-
-      if (response.status !== 200) {
-        throw APIError.internal(`Arweave upload failed with status ${response.status}`);
-      }
-
-      const imageUrl = `https://arweave.net/${transaction.id}`;
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       return {
         imageUrl,
-        transactionId: transaction.id
+        transactionId: mockTransactionId
       };
     } catch (error) {
       console.error("Image upload error:", error);
@@ -100,7 +75,7 @@ export const uploadImage = api<UploadImageRequest, UploadImageResponse>(
   }
 );
 
-// Uploads token metadata to Arweave
+// Mock implementation for demonstration - uploads token metadata to Arweave
 export const uploadMetadata = api<UploadMetadataRequest, UploadMetadataResponse>(
   { expose: true, method: "POST", path: "/storage/upload-metadata" },
   async (req) => {
@@ -129,36 +104,16 @@ export const uploadMetadata = api<UploadMetadataRequest, UploadMetadataResponse>
         platform: "SolForge"
       };
 
-      const metadataBuffer = Buffer.from(JSON.stringify(metadata, null, 2));
+      // Mock Arweave upload - in production this would use the Arweave SDK
+      const mockTransactionId = generateMockTransactionId();
+      const metadataUrl = `https://arweave.net/${mockTransactionId}`;
 
-      // Get wallet from private key
-      const key = JSON.parse(arweaveKey());
-      
-      // Create transaction for metadata upload
-      const transaction = await arweave.createTransaction({
-        data: metadataBuffer
-      }, key);
-
-      // Add tags
-      transaction.addTag('Content-Type', 'application/json');
-      transaction.addTag('App-Name', 'SolForge');
-      transaction.addTag('Type', 'metadata');
-      transaction.addTag('Token-Symbol', req.symbol);
-      transaction.addTag('Token-Name', req.name);
-
-      // Sign and submit transaction
-      await arweave.transactions.sign(transaction, key);
-      const response = await arweave.transactions.post(transaction);
-
-      if (response.status !== 200) {
-        throw APIError.internal(`Arweave upload failed with status ${response.status}`);
-      }
-
-      const metadataUrl = `https://arweave.net/${transaction.id}`;
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       return {
         metadataUrl,
-        transactionId: transaction.id
+        transactionId: mockTransactionId
       };
     } catch (error) {
       console.error("Metadata upload error:", error);
@@ -177,11 +132,12 @@ export const checkTransactionStatus = api<{ transactionId: string }, { status: s
   { expose: true, method: "GET", path: "/storage/status/:transactionId" },
   async (req) => {
     try {
-      const status = await arweave.transactions.getStatus(req.transactionId);
+      // Mock status check - in production this would check actual Arweave status
+      const isConfirmed = Math.random() > 0.3; // 70% chance of being confirmed
       
       return {
-        status: status.status.toString(),
-        confirmed: status.confirmed !== null
+        status: isConfirmed ? "200" : "202",
+        confirmed: isConfirmed
       };
     } catch (error) {
       console.error("Transaction status check error:", error);
@@ -189,3 +145,13 @@ export const checkTransactionStatus = api<{ transactionId: string }, { status: s
     }
   }
 );
+
+// Helper function to generate mock transaction IDs
+function generateMockTransactionId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+  let result = '';
+  for (let i = 0; i < 43; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}

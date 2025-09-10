@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Wallet, Home, Plus, BarChart3, Map, Rocket } from 'lucide-react';
+import { Wallet, Home, Plus, BarChart3, Map, Rocket, TrendingUp, Zap } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletButton } from '../wallet/WalletButton';
 import { APP_CONFIG } from '../../config';
@@ -15,6 +15,8 @@ export function AppHeader() {
     { name: 'Launchpad', href: '/launchpad', icon: Rocket },
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3, requiresWallet: true },
     { name: 'Create Token', href: '/create', icon: Plus, requiresWallet: true },
+    { name: 'Launch Token', href: '/launch', icon: Zap, requiresWallet: true },
+    { name: 'Analytics', href: '/analytics', icon: TrendingUp, requiresWallet: true },
     { name: 'Roadmap', href: '/roadmap', icon: Map },
   ];
 
@@ -33,7 +35,7 @@ export function AppHeader() {
           </div>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden lg:flex items-center space-x-1">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -51,12 +53,42 @@ export function AppHeader() {
                   {isDisabled ? (
                     <span className="flex items-center space-x-2 opacity-50">
                       <Icon className="h-4 w-4" />
-                      <span>{item.name}</span>
+                      <span className="hidden xl:inline">{item.name}</span>
                     </span>
                   ) : (
                     <Link to={item.href} className="flex items-center space-x-2">
                       <Icon className="h-4 w-4" />
-                      <span>{item.name}</span>
+                      <span className="hidden xl:inline">{item.name}</span>
+                    </Link>
+                  )}
+                </Button>
+              );
+            })}
+          </nav>
+
+          {/* Mobile Navigation Menu */}
+          <nav className="flex lg:hidden items-center space-x-1">
+            {navigation.slice(0, 4).map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.href;
+              const isDisabled = item.requiresWallet && !connected;
+              
+              return (
+                <Button
+                  key={item.name}
+                  asChild={!isDisabled}
+                  variant={isActive ? "default" : "ghost"}
+                  size="sm"
+                  disabled={isDisabled}
+                  className="flex items-center"
+                >
+                  {isDisabled ? (
+                    <span className="opacity-50">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                  ) : (
+                    <Link to={item.href}>
+                      <Icon className="h-4 w-4" />
                     </Link>
                   )}
                 </Button>

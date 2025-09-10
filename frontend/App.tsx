@@ -6,9 +6,11 @@ import { AppHeader } from './components/layout/AppHeader';
 import { AppFooter } from './components/layout/AppFooter';
 import { HomePage } from './pages/HomePage';
 import { DashboardPage } from './pages/DashboardPage';
-import { CreateTokenPage } from './pages/CreateTokenPage';
+import { CreateTokenWizardPage } from './pages/CreateTokenWizardPage';
+import { LaunchTokenPage } from './pages/LaunchTokenPage';
 import { LaunchpadPage } from './pages/LaunchpadPage';
 import { RoadmapPage } from './pages/RoadmapPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SolanaProviders } from './providers/SolanaProviders';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
@@ -30,7 +32,9 @@ function AppInner() {
           <Route path="/" element={<HomePage />} />
           <Route path="/launchpad" element={<LaunchpadPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/create" element={<CreateTokenPage />} />
+          <Route path="/create" element={<CreateTokenWizardPage />} />
+          <Route path="/launch" element={<LaunchTokenPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/roadmap" element={<RoadmapPage />} />
         </Routes>
       </main>

@@ -1,6 +1,5 @@
 import { api } from "encore.dev/api";
 import { tokenDB } from "../token/db";
-import { Connection } from "@solana/web3.js";
 import { secret } from "encore.dev/config";
 
 const solanaRpcUrl = secret("SolanaRpcUrl");
@@ -61,13 +60,27 @@ export const healthCheck = api<void, HealthStatus>(
     // Check Solana RPC
     try {
       const solanaStart = Date.now();
-      const connection = new Connection(solanaRpcUrl(), 'confirmed');
-      const blockHeight = await connection.getBlockHeight();
-      services.solana = {
-        status: 'healthy',
-        latency: Date.now() - solanaStart,
-        details: { blockHeight }
-      };
+      const response = await fetch(solanaRpcUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getBlockHeight'
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        services.solana = {
+          status: 'healthy',
+          latency: Date.now() - solanaStart,
+          details: { blockHeight: data.result }
+        };
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
     } catch (error) {
       services.solana = {
         status: 'unhealthy',
@@ -122,14 +135,27 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
     // Solana RPC health
     try {
       const solanaStart = Date.now();
-      const connection = new Connection(solanaRpcUrl(), 'confirmed');
-      const blockHeight = await connection.getBlockHeight();
+      const response = await fetch(solanaRpcUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getBlockHeight'
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
       
-      results.solana = {
-        rpcHealthy: true,
-        latency: Date.now() - solanaStart,
-        blockHeight
-      };
+      if (response.ok) {
+        const data = await response.json();
+        results.solana = {
+          rpcHealthy: true,
+          latency: Date.now() - solanaStart,
+          blockHeight: data.result
+        };
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
     } catch (error) {
       results.solana = {
         rpcHealthy: false,
@@ -200,21 +226,30 @@ export const solanaHealth = api<void, { healthy: boolean; latency: number; detai
     const start = Date.now();
     
     try {
-      const connection = new Connection(solanaRpcUrl(), 'confirmed');
-      const [blockHeight, slot] = await Promise.all([
-        connection.getBlockHeight(),
-        connection.getSlot()
-      ]);
-
-      return {
-        healthy: true,
-        latency: Date.now() - start,
-        details: {
-          blockHeight,
-          slot,
-          rpcEndpoint: solanaRpcUrl()
-        }
-      };
+      const response = await fetch(solanaRpcUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getBlockHeight'
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          healthy: true,
+          latency: Date.now() - start,
+          details: {
+            blockHeight: data.result,
+            rpcEndpoint: solanaRpcUrl()
+          }
+        };
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
     } catch (error) {
       return {
         healthy: false,
