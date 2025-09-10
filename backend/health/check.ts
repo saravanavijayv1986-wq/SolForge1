@@ -3,7 +3,6 @@ import { tokenDB } from "../token/db";
 import { secret } from "encore.dev/config";
 
 const solanaRpcUrl = secret("SolanaRpcUrl");
-const raydiumApiBase = secret("RaydiumApiBase");
 
 export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -28,10 +27,6 @@ export interface DetailedHealthCheck {
     rpcHealthy: boolean;
     latency: number;
     blockHeight?: number;
-  };
-  pricing: {
-    raydiumApiHealthy: boolean;
-    latency: number;
   };
 }
 
@@ -163,33 +158,6 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
       };
     }
 
-    // Pricing service health (check Raydium API)
-    try {
-      const pricingStart = Date.now();
-      // Test with a simple SOL/USDC price request
-      const raydiumUrl = `${raydiumApiBase()}/v3/amm/compute/swap-base-in`;
-      const testUrl = new URL(raydiumUrl);
-      testUrl.searchParams.append("inputMint", "So11111111111111111111111111111111111111112"); // WSOL
-      testUrl.searchParams.append("outputMint", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // USDC
-      testUrl.searchParams.append("amount", "1000000000"); // 1 SOL
-      testUrl.searchParams.append("slippageBps", "50");
-      
-      const response = await fetch(testUrl.toString(), {
-        signal: AbortSignal.timeout(5000),
-        headers: { "accept": "application/json" }
-      });
-      
-      results.pricing = {
-        raydiumApiHealthy: response.ok,
-        latency: Date.now() - pricingStart
-      };
-    } catch (error) {
-      results.pricing = {
-        raydiumApiHealthy: false,
-        latency: -1
-      };
-    }
-
     return results as DetailedHealthCheck;
   }
 );
@@ -244,7 +212,7 @@ export const solanaHealth = api<void, { healthy: boolean; latency: number; detai
           latency: Date.now() - start,
           details: {
             blockHeight: data.result,
-            rpcEndpoint: solanaRpcUrl()
+            rpcEndpoint: 'configured'
           }
         };
       } else {
