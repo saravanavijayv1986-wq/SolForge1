@@ -27,8 +27,8 @@ export function HomePage() {
     },
     {
       icon: Globe,
-      title: "Arweave Storage",
-      description: "Permanent metadata storage with guaranteed availability"
+      title: "Local Storage",
+      description: "Efficient local metadata storage with optional external hosting"
     },
     {
       icon: Code,
@@ -304,7 +304,7 @@ export function HomePage() {
             <CardContent>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>✓ Deploy to {NETWORK_CONFIG.displayName}</li>
-                <li>✓ Permanent metadata storage</li>
+                <li>✓ Local metadata storage</li>
                 <li>✓ Full token management</li>
                 <li>✓ No hidden fees</li>
                 <li>✓ 24/7 support</li>

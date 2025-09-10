@@ -76,55 +76,15 @@ export function useEnhancedTokenService() {
           throw new Error(`Insufficient SOL balance. Required: ${requiredBalance.toFixed(3)} SOL, Available: ${balanceInSol.toFixed(4)} SOL`);
         }
 
-        // 2. Upload metadata to Arweave if needed
-        let metadataUrl: string | undefined;
-        let imageTransactionId: string | undefined;
-
-        if (args.logoFile || args.description || args.website || args.twitter || args.telegram || args.discord) {
-          try {
-            // Upload image first if provided
-            let imageUrl: string | undefined;
-            if (args.logoFile) {
-              const base64Data = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.readAsDataURL(args.logoFile!);
-              });
-
-              const imageResponse = await backend.storage.uploadImage({
-                imageData: base64Data,
-                fileName: args.logoFile.name,
-                contentType: args.logoFile.type,
-              });
-
-              imageUrl = imageResponse.imageUrl;
-              imageTransactionId = imageResponse.transactionId;
-            }
-
-            // Upload metadata JSON
-            const metadataResponse = await backend.storage.uploadMetadata({
-              name: args.name,
-              symbol: args.symbol,
-              description: args.description || '',
-              image: imageUrl || '',
-              decimals: args.decimals,
-              supply: args.initialSupply.toString(),
-              creator: publicKey.toString(),
-              attributes: [
-                { trait_type: 'Supply Type', value: args.lockMintAuthority ? 'Fixed' : 'Mintable' },
-                { trait_type: 'Burnable', value: args.isBurnable ? 'Yes' : 'No' },
-                { trait_type: 'Freezable', value: args.hasFreezeAuthority ? 'Yes' : 'No' },
-                ...(args.website ? [{ trait_type: 'Website', value: args.website }] : []),
-                ...(args.twitter ? [{ trait_type: 'Twitter', value: args.twitter }] : []),
-                ...(args.telegram ? [{ trait_type: 'Telegram', value: args.telegram }] : []),
-                ...(args.discord ? [{ trait_type: 'Discord', value: args.discord }] : []),
-              ],
-            });
-
-            metadataUrl = metadataResponse.metadataUrl;
-          } catch (error) {
-            console.warn('Metadata upload failed, continuing without metadata:', error);
-          }
+        // 2. Create a simple metadata object (stored locally)
+        let logoUrl: string | undefined;
+        if (args.logoFile) {
+          // Convert image to base64 data URL for local storage
+          logoUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(args.logoFile!);
+          });
         }
 
         // 3. Create the SPL token
@@ -225,7 +185,7 @@ export function useEnhancedTokenService() {
           ...(await connection.getLatestBlockhash())
         }, 'confirmed');
 
-        // 4. Store token in backend database
+        // 4. Store token in backend database with all expected fields
         try {
           await backend.token.create({
             mintAddress: mintKeypair.publicKey.toBase58(),
@@ -234,23 +194,22 @@ export function useEnhancedTokenService() {
             decimals: args.decimals,
             supply: args.maxSupply?.toString() || args.initialSupply.toString(),
             description: args.description,
-            logoUrl: metadataUrl ? `${metadataUrl}#image` : undefined,
-            metadataUrl,
+            logoUrl: logoUrl,
             creatorWallet: publicKey.toString(),
             feeTransactionSignature: signature,
-            imageTransactionId,
-            metadataTransactionId: metadataUrl ? metadataUrl.split('/').pop() : undefined,
+            imageTransactionId: undefined, // No longer using Arweave but field exists
+            metadataTransactionId: undefined, // No longer using Arweave but field exists
           });
-        } catch (error) {
-          console.warn('Failed to store token in database:', error);
-          // Continue anyway since the token was created successfully
+        } catch (dbError) {
+          console.warn('Failed to store token in database:', dbError);
+          // Continue anyway since the token was created successfully on-chain
+          // The token exists on Solana even if database storage failed
         }
 
         return {
           mint: mintKeypair.publicKey.toBase58(),
           signature,
           ata: ataAddress,
-          metadataUrl,
         };
 
       } catch (error) {

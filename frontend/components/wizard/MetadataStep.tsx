@@ -8,10 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Image, Globe, Twitter, MessageSquare, Hash, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, Image, Globe, Twitter, MessageSquare, Hash, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useTokenWizard } from '../../providers/TokenWizardProvider';
-import backend from '~backend/client';
 
 const metadataSchema = z.object({
   description: z.string().optional(),
@@ -27,7 +26,6 @@ export function MetadataStep() {
   const { formData, updateFormData } = useTokenWizard();
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
-  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -88,40 +86,10 @@ export function MetadataStep() {
     };
     reader.readAsDataURL(file);
 
-    // Upload to Arweave (optional - can be done later during token creation)
-    setIsUploading(true);
-    try {
-      const base64Data = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-
-      const response = await backend.storage.uploadImage({
-        imageData: base64Data,
-        fileName: file.name,
-        contentType: file.type,
-      });
-
-      updateFormData({
-        logoUrl: response.imageUrl,
-        imageTransactionId: response.transactionId,
-      });
-
-      toast({
-        title: "Image Uploaded",
-        description: "Your logo has been uploaded to Arweave",
-      });
-    } catch (error) {
-      console.error('Image upload failed:', error);
-      toast({
-        title: "Upload Failed",
-        description: "Failed to upload image. You can continue and try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-    }
+    toast({
+      title: "Image Selected",
+      description: "Your logo has been selected for token creation",
+    });
   };
 
   const removeImage = () => {
@@ -130,7 +98,6 @@ export function MetadataStep() {
     updateFormData({
       logoFile: undefined,
       logoUrl: undefined,
-      imageTransactionId: undefined,
     });
   };
 
@@ -163,7 +130,7 @@ export function MetadataStep() {
             <span>Token Logo</span>
           </CardTitle>
           <CardDescription>
-            Upload an image to represent your token (optional but recommended)
+            Upload an image to represent your token (optional)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -176,18 +143,9 @@ export function MetadataStep() {
               </p>
               <div className="flex justify-center">
                 <label htmlFor="logo-upload">
-                  <Button variant="outline" className="cursor-pointer" disabled={isUploading}>
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Choose File
-                      </>
-                    )}
+                  <Button variant="outline" className="cursor-pointer">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choose File
                   </Button>
                 </label>
                 <input
@@ -196,7 +154,6 @@ export function MetadataStep() {
                   accept="image/*"
                   className="hidden"
                   onChange={handleFileUpload}
-                  disabled={isUploading}
                 />
               </div>
             </div>
@@ -212,13 +169,11 @@ export function MetadataStep() {
               <div className="flex-1">
                 <h4 className="font-medium">Logo Preview</h4>
                 <p className="text-sm text-muted-foreground">
-                  {logoFile?.name} ({(logoFile?.size || 0 / 1024).toFixed(1)} KB)
+                  {logoFile?.name} ({((logoFile?.size || 0) / 1024).toFixed(1)} KB)
                 </p>
-                {formData.imageTransactionId && (
-                  <Badge className="mt-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    Uploaded to Arweave
-                  </Badge>
-                )}
+                <Badge className="mt-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  Ready for token creation
+                </Badge>
               </div>
               <Button variant="outline" onClick={removeImage}>
                 Remove
@@ -404,12 +359,12 @@ export function MetadataStep() {
       <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
         <CardContent className="pt-6">
           <div className="flex items-start space-x-3">
-            <Image className="h-5 w-5 text-blue-500 mt-0.5" />
+            <Info className="h-5 w-5 text-blue-500 mt-0.5" />
             <div>
               <h4 className="font-semibold text-blue-800 dark:text-blue-200">Metadata Storage</h4>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                All metadata is stored permanently on Arweave for decentralized access. 
-                This ensures your token information is always available and cannot be censored.
+                Token metadata will be stored locally and can be updated later. 
+                For permanent storage, consider uploading to IPFS or Arweave separately.
               </p>
             </div>
           </div>

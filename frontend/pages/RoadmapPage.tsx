@@ -44,7 +44,7 @@ const roadmapPhases: RoadmapPhase[] = [
     quarter: 'Q4 2024',
     features: [
       'Solana Mainnet deployment with enterprise infrastructure',
-      'SPL token creation with Arweave metadata storage',
+      'SPL token creation with local metadata storage',
       'Real-time wallet balance checking and transaction verification',
       'Comprehensive Solana network error handling',
       'Multi-signature treasury and 0.1 SOL fee system',

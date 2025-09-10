@@ -69,7 +69,7 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
         throw APIError.alreadyExists("Token with this mint address already exists");
       }
 
-      // Create the token
+      // Create the token with all expected columns
       const token = await tokenDB.queryRow<CreateTokenResponse>`
         INSERT INTO tokens (
           mint_address, name, symbol, decimals, supply, description, 
@@ -104,6 +104,12 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
       // Handle database constraint errors
       if (error instanceof Error && error.message.includes('unique constraint')) {
         throw APIError.alreadyExists("Token with this mint address already exists");
+      }
+      
+      // Handle column not found errors
+      if (error instanceof Error && (error.message.includes('column') || error.message.includes('relation'))) {
+        console.error("Database schema error:", error.message);
+        throw APIError.internal("Database schema error. Please contact support.");
       }
       
       throw APIError.internal("An unexpected error occurred during token creation");

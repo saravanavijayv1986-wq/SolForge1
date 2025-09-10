@@ -34,8 +34,8 @@ export function FeePreviewBox() {
           </div>
           
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Arweave Storage</span>
-            <span className="font-medium text-green-600">Included</span>
+            <span className="text-sm text-muted-foreground">Metadata Storage</span>
+            <span className="font-medium text-green-600">Local</span>
           </div>
           
           <hr className="border-muted-foreground/20" />
@@ -54,7 +54,7 @@ export function FeePreviewBox() {
             </div>
             <ul className="space-y-1 ml-4">
               <li>• SPL token deployment on {NETWORK_CONFIG.displayName}</li>
-              <li>• Permanent metadata storage on Arweave</li>
+              <li>• Local metadata storage</li>
               <li>• Token management dashboard access</li>
               <li>• 24/7 technical support</li>
             </ul>
