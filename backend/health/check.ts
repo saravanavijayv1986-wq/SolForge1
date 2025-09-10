@@ -46,6 +46,7 @@ export const healthCheck = api<void, HealthStatus>(
         latency: Date.now() - dbStart
       };
     } catch (error) {
+      console.error("Database health check failed:", error);
       services.database = {
         status: 'unhealthy',
         error: error instanceof Error ? error.message : 'Database connection failed'
@@ -54,8 +55,13 @@ export const healthCheck = api<void, HealthStatus>(
 
     // Check Solana RPC
     try {
+      const rpcUrl = solanaRpcUrl();
+      if (!rpcUrl || rpcUrl.trim().length === 0) {
+        throw new Error("Solana RPC URL not configured");
+      }
+
       const solanaStart = Date.now();
-      const response = await fetch(solanaRpcUrl(), {
+      const response = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,9 +80,10 @@ export const healthCheck = api<void, HealthStatus>(
           details: { blockHeight: data.result }
         };
       } else {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
+      console.error("Solana health check failed:", error);
       services.solana = {
         status: 'unhealthy',
         error: error instanceof Error ? error.message : 'Solana RPC connection failed'
@@ -113,7 +120,6 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
     // Database health
     try {
       const dbStart = Date.now();
-      
       const tokenTest = await tokenDB.queryRow`SELECT 1 as test`;
       
       results.database = {
@@ -121,6 +127,7 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
         latency: Date.now() - dbStart
       };
     } catch (error) {
+      console.error("Database detailed health check failed:", error);
       results.database = {
         token: false,
         latency: -1
@@ -129,8 +136,13 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
 
     // Solana RPC health
     try {
+      const rpcUrl = solanaRpcUrl();
+      if (!rpcUrl || rpcUrl.trim().length === 0) {
+        throw new Error("Solana RPC URL not configured");
+      }
+
       const solanaStart = Date.now();
-      const response = await fetch(solanaRpcUrl(), {
+      const response = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -149,9 +161,10 @@ export const detailedHealthCheck = api<void, DetailedHealthCheck>(
           blockHeight: data.result
         };
       } else {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
+      console.error("Solana detailed health check failed:", error);
       results.solana = {
         rpcHealthy: false,
         latency: -1
@@ -179,6 +192,7 @@ export const databaseHealth = api<void, { healthy: boolean; latency: number; det
         }
       };
     } catch (error) {
+      console.error("Database specific health check failed:", error);
       return {
         healthy: false,
         latency: Date.now() - start,
@@ -194,7 +208,12 @@ export const solanaHealth = api<void, { healthy: boolean; latency: number; detai
     const start = Date.now();
     
     try {
-      const response = await fetch(solanaRpcUrl(), {
+      const rpcUrl = solanaRpcUrl();
+      if (!rpcUrl || rpcUrl.trim().length === 0) {
+        throw new Error("Solana RPC URL not configured");
+      }
+
+      const response = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -216,9 +235,10 @@ export const solanaHealth = api<void, { healthy: boolean; latency: number; detai
           }
         };
       } else {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
+      console.error("Solana specific health check failed:", error);
       return {
         healthy: false,
         latency: Date.now() - start,

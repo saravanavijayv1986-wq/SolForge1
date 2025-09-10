@@ -37,77 +37,106 @@ export interface TokenInfo {
 export const list = api<ListTokensRequest, ListTokensResponse>(
   { expose: true, method: "GET", path: "/token/list" },
   async (req) => {
-    const limit = req.limit || 20;
-    const offset = req.offset || 0;
-    
-    let query = `
-      SELECT DISTINCT
-        t.id, t.mint_address as "mintAddress", t.name, t.symbol, t.decimals, t.supply, 
-        t.description, t.logo_url as "logoUrl", t.metadata_url as "metadataUrl",
-        t.creator_wallet as "creatorWallet", t.total_minted as "totalMinted",
-        t.is_mintable as "isMintable", t.is_frozen as "isFrozen", t.created_at as "createdAt"
-    `;
-    
-    // Add user balance if holderWallet is specified
-    if (req.holderWallet) {
-      query += `, COALESCE(tb.balance, '0') as "userBalance"`;
+    try {
+      console.log("Token list request:", req);
+
+      const limit = Math.min(Math.max(req.limit || 20, 1), 100); // Between 1 and 100
+      const offset = Math.max(req.offset || 0, 0); // Ensure non-negative
+      
+      // Test database connection
+      try {
+        await tokenDB.queryRow`SELECT 1 as test`;
+        console.log("Database connection test successful");
+      } catch (dbError) {
+        console.error("Database connection test failed:", dbError);
+        throw new Error("Database is currently unavailable");
+      }
+
+      // Simple query without complex joins initially
+      let query = `
+        SELECT 
+          t.id,
+          t.mint_address as "mintAddress",
+          t.name,
+          t.symbol,
+          t.decimals,
+          t.supply,
+          t.description,
+          t.logo_url as "logoUrl",
+          t.metadata_url as "metadataUrl",
+          t.creator_wallet as "creatorWallet",
+          COALESCE(t.total_minted, '0') as "totalMinted",
+          COALESCE(t.is_mintable, true) as "isMintable",
+          COALESCE(t.is_frozen, false) as "isFrozen",
+          t.created_at as "createdAt"
+        FROM tokens t
+      `;
+
+      let countQuery = `SELECT COUNT(*) as count FROM tokens t`;
+      const params: any[] = [];
+      const whereConditions: string[] = [];
+      let paramIndex = 1;
+
+      // Add creator wallet filter
+      if (req.creatorWallet && req.creatorWallet.trim()) {
+        whereConditions.push(`t.creator_wallet = $${paramIndex}`);
+        params.push(req.creatorWallet.trim());
+        paramIndex++;
+      }
+
+      // Add WHERE clause if we have conditions
+      if (whereConditions.length > 0) {
+        const whereClause = ` WHERE ${whereConditions.join(' AND ')}`;
+        query += whereClause;
+        countQuery += whereClause;
+      }
+
+      query += ` ORDER BY t.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      params.push(limit, offset);
+
+      // For count query, use same params except limit/offset
+      const countParams = params.slice(0, -2);
+
+      console.log("Executing queries with params:", params);
+
+      const [tokens, countResult] = await Promise.all([
+        tokenDB.rawQueryAll<TokenInfo>(query, ...params),
+        tokenDB.rawQueryRow<{ count: number }>(countQuery, ...countParams)
+      ]);
+
+      const total = Number(countResult?.count || 0);
+      const hasMore = offset + tokens.length < total;
+
+      console.log(`Query returned ${tokens.length} tokens, total: ${total}`);
+
+      return {
+        tokens: tokens || [],
+        total,
+        hasMore
+      };
+
+    } catch (error) {
+      console.error("Token list error:", error);
+      
+      if (error instanceof Error) {
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+          throw new Error("Database connection failed");
+        }
+        
+        if (errorMessage.includes('syntax error') || errorMessage.includes('column')) {
+          console.error("Database query error:", error.message);
+          throw new Error("Database query failed");
+        }
+
+        if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+          console.error("Database table missing:", error.message);
+          throw new Error("Database not properly initialized");
+        }
+      }
+      
+      throw new Error("Failed to retrieve tokens");
     }
-    
-    query += ` FROM tokens t`;
-    
-    // Join with balances if looking for holder's tokens
-    if (req.holderWallet) {
-      query += ` LEFT JOIN token_balances tb ON t.id = tb.token_id AND tb.wallet_address = $1`;
-    }
-    
-    let countQuery = `SELECT COUNT(DISTINCT t.id) as count FROM tokens t`;
-    const params: any[] = [];
-    let paramIndex = req.holderWallet ? 2 : 1;
-    let whereConditions: string[] = [];
-    
-    // Add holder wallet parameter first if specified
-    if (req.holderWallet) {
-      params.unshift(req.holderWallet);
-      countQuery += ` LEFT JOIN token_balances tb ON t.id = tb.token_id AND tb.wallet_address = $1`;
-    }
-    
-    // Add creator wallet filter
-    if (req.creatorWallet) {
-      whereConditions.push(`t.creator_wallet = $${paramIndex}`);
-      params.push(req.creatorWallet);
-      paramIndex++;
-    }
-    
-    // If looking for holder's tokens, filter for tokens they have balance in OR created
-    if (req.holderWallet && !req.creatorWallet) {
-      whereConditions.push(`(tb.balance IS NOT NULL AND CAST(tb.balance AS NUMERIC) > 0) OR t.creator_wallet = $1`);
-    }
-    
-    // Add WHERE clause if we have conditions
-    if (whereConditions.length > 0) {
-      const whereClause = ` WHERE ${whereConditions.join(' AND ')}`;
-      query += whereClause;
-      countQuery += whereClause;
-    }
-    
-    query += ` ORDER BY t.created_at DESC LIMIT $${paramIndex}::integer OFFSET $${paramIndex + 1}::integer`;
-    params.push(limit, offset);
-    
-    // For count query, we don't need the LIMIT and OFFSET params
-    const countParams = params.slice(0, -2);
-    
-    const [tokens, countResult] = await Promise.all([
-      tokenDB.rawQueryAll<TokenInfo>(query, ...params),
-      tokenDB.rawQueryRow<{ count: number }>(countQuery, ...countParams)
-    ]);
-    
-    const total = countResult?.count || 0;
-    const hasMore = offset + tokens.length < total;
-    
-    return {
-      tokens,
-      total,
-      hasMore
-    };
   }
 );

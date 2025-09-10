@@ -64,7 +64,13 @@ export function useEnhancedTokenService() {
       if (!publicKey) throw new Error('Wallet not connected');
 
       try {
-        // 1. Check wallet balance
+        // 1. Validate inputs
+        if (!args.name?.trim()) throw new Error('Token name is required');
+        if (!args.symbol?.trim()) throw new Error('Token symbol is required');
+        if (args.decimals < 0 || args.decimals > 9) throw new Error('Decimals must be between 0 and 9');
+        if (args.initialSupply < 0) throw new Error('Initial supply cannot be negative');
+
+        // 2. Check wallet balance
         const balance = await withRetry(async () => {
           return await connection.getBalance(publicKey);
         }, 3, 1000);
@@ -76,18 +82,19 @@ export function useEnhancedTokenService() {
           throw new Error(`Insufficient SOL balance. Required: ${requiredBalance.toFixed(3)} SOL, Available: ${balanceInSol.toFixed(4)} SOL`);
         }
 
-        // 2. Create a simple metadata object (stored locally)
+        // 3. Create a simple metadata object (stored locally)
         let logoUrl: string | undefined;
         if (args.logoFile) {
           // Convert image to base64 data URL for local storage
-          logoUrl = await new Promise<string>((resolve) => {
+          logoUrl = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('Failed to read image file'));
             reader.readAsDataURL(args.logoFile!);
           });
         }
 
-        // 3. Create the SPL token
+        // 4. Create the SPL token
         const mintKeypair = Keypair.generate();
         const lamports = await getMinimumBalanceForRentExemption(connection, MINT_SIZE);
 
@@ -174,26 +181,39 @@ export function useEnhancedTokenService() {
           );
         }
 
-        // Send transaction
-        const signature = await sendTransaction(transaction, connection, {
-          signers: [mintKeypair],
-        });
+        // Get latest blockhash
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
 
-        // Wait for confirmation
-        await connection.confirmTransaction({
-          signature,
-          ...(await connection.getLatestBlockhash())
-        }, 'confirmed');
+        // Send transaction with retry logic
+        const signature = await withRetry(async () => {
+          return await sendTransaction(transaction, connection, {
+            signers: [mintKeypair],
+          });
+        }, 3, 2000);
 
-        // 4. Store token in backend database with all expected fields
+        // Wait for confirmation with timeout
+        const confirmation = await withRetry(async () => {
+          return await connection.confirmTransaction({
+            signature,
+            blockhash,
+            lastValidBlockHeight
+          }, 'confirmed');
+        }, 5, 3000);
+
+        if (confirmation.value.err) {
+          throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+        }
+
+        // 5. Store token in backend database with all expected fields
         try {
           await backend.token.create({
             mintAddress: mintKeypair.publicKey.toBase58(),
-            name: args.name,
-            symbol: args.symbol,
+            name: args.name.trim(),
+            symbol: args.symbol.trim().toUpperCase(),
             decimals: args.decimals,
             supply: args.maxSupply?.toString() || args.initialSupply.toString(),
-            description: args.description,
+            description: args.description?.trim(),
             logoUrl: logoUrl,
             creatorWallet: publicKey.toString(),
             feeTransactionSignature: signature,
@@ -210,6 +230,7 @@ export function useEnhancedTokenService() {
           mint: mintKeypair.publicKey.toBase58(),
           signature,
           ata: ataAddress,
+          metadataUrl: undefined, // Local storage, no external URL
         };
 
       } catch (error) {
