@@ -1,19 +1,17 @@
 import { api, APIError } from "encore.dev/api";
-import { secret } from "encore.dev/config";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { launchpadDB } from "./db";
+import { validateInput } from "../shared/validation";
+import { createLogger } from "../shared/logger";
+import { metrics, trackDbPerformance } from "../shared/monitoring";
+import { solanaService } from "../shared/solana";
+import { SOLF_CONFIG, SOLANA_ADDRESSES } from "../config/app";
 
-const solanaRpcUrl = secret("SolanaRpcUrl");
+const logger = createLogger('launchpad-buy');
 
-// Hardcoded wallet addresses for the demo
-const TREASURY_WALLET = "7wBKaVpxKBa31VgY4HBd7xzCu3AxoAzK8LjGr9zn8YxJ";
-const TEAM_WALLET = "3YkFz8vUBa7mLrCcGx4nKzDu5AxoAzK8LjGr9zn8YxJ";
-
-// Constants
-const SOLF_PER_SOL = 10000;
-const FEE_AMOUNT_SOL = 0.1;
-const LAMPORTS_PER_SOL = 1000000000;
-const MIN_PURCHASE_SOL = 0.2;
+// Get treasury and team wallets from configuration
+const TREASURY_WALLET = SOLANA_ADDRESSES.treasuryWallet();
+const TEAM_WALLET = SOLANA_ADDRESSES.teamWallet();
 
 export interface BuySOLFRequest {
   wallet: string;
@@ -43,48 +41,46 @@ export interface PurchaseRecord {
 export const buy = api<BuySOLFRequest, BuySOLFResponse>(
   { expose: true, method: "POST", path: "/launchpad/buy" },
   async (req) => {
+    const requestId = `launchpad-buy-${Date.now()}`;
+    const timer = metrics.timer('launchpad_buy_request');
+    
+    logger.info('Launchpad buy request received', {
+      requestId,
+      wallet: req.wallet?.substring(0, 8) + "...",
+      txSig: req.txSig?.substring(0, 8) + "...",
+    });
+    
     try {
-      console.log("Launchpad buy request received:", { 
-        wallet: req.wallet?.substring(0, 8) + "...", 
-        txSig: req.txSig?.substring(0, 8) + "..." 
-      });
-
-      // Validate input types and content
-      if (!req.wallet || typeof req.wallet !== 'string' || req.wallet.trim().length === 0) {
-        throw APIError.invalidArgument("Wallet address is required and must be a non-empty string");
-      }
+      // Validate input with comprehensive checks
+      validateInput()
+        .validateWalletAddress(req.wallet, true)
+        .validateTransactionSignature(req.txSig, true)
+        .throwIfInvalid();
       
-      if (!req.txSig || typeof req.txSig !== 'string' || req.txSig.trim().length === 0) {
-        throw APIError.invalidArgument("Transaction signature is required and must be a non-empty string");
-      }
-
       const cleanWallet = req.wallet.trim();
       const cleanTxSig = req.txSig.trim();
-
-      // Validate wallet address format
-      try {
-        new PublicKey(cleanWallet);
-      } catch (error) {
-        console.error("Invalid wallet address format:", cleanWallet);
-        throw APIError.invalidArgument("Invalid wallet address format");
-      }
-
-      // Validate transaction signature format (basic length check)
-      if (cleanTxSig.length < 80 || cleanTxSig.length > 90) {
-        throw APIError.invalidArgument("Invalid transaction signature format");
-      }
-
-      // Check database connection first
+      
+      logger.debug('Input validation successful', {
+        requestId,
+        wallet: cleanWallet.substring(0, 8) + "...",
+        txSig: cleanTxSig.substring(0, 8) + "...",
+      });
+      
+      // Check database connection
+      const dbTimer = trackDbPerformance('connection_test', 'launchpad_purchases');
       try {
         await launchpadDB.queryRow`SELECT 1 as test`;
-        console.log("Database connection test successful");
+        logger.debug('Database connection test successful', { requestId });
       } catch (dbError) {
-        console.error("Database connection test failed:", dbError);
+        logger.error('Database connection test failed', { requestId }, dbError instanceof Error ? dbError : new Error(String(dbError)));
         throw APIError.unavailable("Database is currently unavailable");
+      } finally {
+        dbTimer();
       }
-
+      
       // Check for existing purchase (idempotent operation)
-      console.log("Checking for existing purchase...");
+      logger.debug('Checking for existing purchase', { requestId });
+      const existsTimer = trackDbPerformance('select', 'launchpad_purchases');
       const existingPurchase = await launchpadDB.queryRow<PurchaseRecord>`
         SELECT 
           id,
@@ -97,9 +93,17 @@ export const buy = api<BuySOLFRequest, BuySOLFResponse>(
         FROM launchpad_purchases 
         WHERE tx_sig = ${cleanTxSig}
       `;
-
+      existsTimer();
+      
       if (existingPurchase) {
-        console.log("Returning existing purchase:", existingPurchase.id);
+        logger.info('Returning existing purchase', {
+          requestId,
+          purchaseId: existingPurchase.id,
+        });
+        
+        timer();
+        metrics.increment('launchpad_buy_existing');
+        
         return {
           ok: true,
           solSpent: existingPurchase.solSent,
@@ -108,95 +112,104 @@ export const buy = api<BuySOLFRequest, BuySOLFResponse>(
           txSig: existingPurchase.txSig
         };
       }
-
-      // Initialize Solana connection with error handling
-      let connection: Connection | null = null;
-      try {
-        const rpcUrl = solanaRpcUrl();
-        if (!rpcUrl || typeof rpcUrl !== 'string' || rpcUrl.trim().length === 0) {
-          throw new Error("Solana RPC URL not properly configured");
-        }
-        
-        connection = new Connection(rpcUrl.trim(), 'confirmed');
-        // Test the connection
-        await connection.getSlot();
-        console.log("Solana connection established successfully");
-      } catch (error) {
-        console.error("Failed to establish Solana connection:", error);
-        // Continue with demo mode instead of failing
-        connection = null;
-      }
       
-      // Default values for demo mode
+      // Default values (for devnet simulation)
       let solSpent = 1.0;
-      let teamFee = FEE_AMOUNT_SOL;
+      let teamFee = SOLF_CONFIG.platformFee;
+      let verificationSuccess = false;
       
-      // Try to verify the transaction if connection is available
-      if (connection) {
-        try {
-          console.log("Attempting to verify transaction on-chain...");
+      // Try to verify the transaction on Solana
+      logger.debug('Attempting transaction verification', { requestId });
+      try {
+        const transaction = await solanaService.getTransaction(cleanTxSig);
+        
+        if (transaction && !transaction.meta?.err) {
+          logger.info('Transaction verified successfully', {
+            requestId,
+            slot: transaction.slot,
+            blockTime: transaction.blockTime,
+          });
           
-          const transaction = await Promise.race([
-            connection.getTransaction(cleanTxSig, {
-              commitment: 'confirmed',
-              maxSupportedTransactionVersion: 0
-            }),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Transaction lookup timeout')), 10000)
-            )
-          ]);
-
-          if (transaction && !transaction.meta?.err) {
-            console.log("Transaction verified successfully");
+          verificationSuccess = true;
+          
+          // Parse actual transaction data if verification successful
+          const accountKeys = transaction.transaction.message.accountKeys;
+          const preBalances = transaction.meta?.preBalances || [];
+          const postBalances = transaction.meta?.postBalances || [];
+          
+          // Find transfers to treasury and team wallets
+          let treasuryTransfer = 0;
+          let teamTransfer = 0;
+          
+          for (let i = 0; i < accountKeys.length; i++) {
+            const accountKey = accountKeys[i].toString();
+            const balanceChange = (postBalances[i] || 0) - (preBalances[i] || 0);
             
-            // Parse actual transaction data
-            const accountKeys = transaction.transaction.message.accountKeys;
-            const preBalances = transaction.meta?.preBalances || [];
-            const postBalances = transaction.meta?.postBalances || [];
-
-            // Find transfers to treasury and team wallets
-            let treasuryTransfer = 0;
-            let teamTransfer = 0;
-
-            for (let i = 0; i < accountKeys.length; i++) {
-              const accountKey = accountKeys[i].toString();
-              const balanceChange = (postBalances[i] || 0) - (preBalances[i] || 0);
-              
-              if (accountKey === TREASURY_WALLET) {
-                treasuryTransfer = balanceChange / LAMPORTS_PER_SOL;
-              } else if (accountKey === TEAM_WALLET) {
-                teamTransfer = balanceChange / LAMPORTS_PER_SOL;
-              }
+            if (accountKey === TREASURY_WALLET) {
+              treasuryTransfer = balanceChange / 1e9; // Convert lamports to SOL
+            } else if (accountKey === TEAM_WALLET) {
+              teamTransfer = balanceChange / 1e9; // Convert lamports to SOL
             }
-
-            // Use actual amounts if valid
-            if (treasuryTransfer >= MIN_PURCHASE_SOL) {
-              solSpent = treasuryTransfer;
-            }
-            if (teamTransfer >= FEE_AMOUNT_SOL) {
-              teamFee = teamTransfer;
-            }
-          } else if (transaction?.meta?.err) {
-            throw APIError.failedPrecondition("Transaction failed on-chain");
           }
-        } catch (verificationError) {
-          console.error("Transaction verification failed, using demo values:", verificationError);
-          // Continue with demo values instead of failing
+          
+          // Use actual amounts if valid, otherwise fall back to default
+          if (treasuryTransfer >= SOLF_CONFIG.minPurchase) {
+            solSpent = treasuryTransfer;
+          }
+          if (teamTransfer >= SOLF_CONFIG.platformFee) {
+            teamFee = teamTransfer;
+          }
+          
+          logger.debug('Transaction amounts parsed', {
+            requestId,
+            treasuryTransfer,
+            teamTransfer,
+            solSpent,
+            teamFee,
+          });
+        } else if (transaction?.meta?.err) {
+          logger.warn('Transaction failed on-chain', {
+            requestId,
+            error: transaction.meta.err,
+          });
+          throw APIError.failedPrecondition("Transaction failed on-chain");
         }
-      } else {
-        console.log("Using demo mode - no Solana connection available");
+      } catch (verificationError) {
+        logger.warn('Transaction verification failed, using default values', {
+          requestId,
+          error: verificationError instanceof Error ? verificationError.message : 'Unknown error',
+        });
+        // Continue with default values for devnet testing
       }
-
+      
+      // Validate purchase amounts
+      if (solSpent < SOLF_CONFIG.minPurchase) {
+        throw APIError.invalidArgument(`Minimum purchase is ${SOLF_CONFIG.minPurchase} SOL`);
+      }
+      
+      if (solSpent > SOLF_CONFIG.maxPurchase) {
+        throw APIError.invalidArgument(`Maximum purchase is ${SOLF_CONFIG.maxPurchase} SOL`);
+      }
+      
       // Calculate SOLF distribution
-      const solfToDistribute = Math.floor(solSpent * SOLF_PER_SOL);
+      const solfToDistribute = Math.floor(solSpent * SOLF_CONFIG.exchangeRate);
       if (solfToDistribute <= 0) {
         throw APIError.invalidArgument("Invalid SOL amount for SOLF calculation");
       }
-
+      
+      logger.debug('SOLF calculation completed', {
+        requestId,
+        solSpent,
+        solfToDistribute,
+        exchangeRate: SOLF_CONFIG.exchangeRate,
+      });
+      
+      // Generate mock distribution transaction signature for devnet
       const mockDistributionTxSig = generateMockTransactionSignature();
-
-      // Record the purchase in database with explicit error handling
-      console.log("Recording purchase in database...");
+      
+      // Record the purchase in database
+      logger.info('Recording purchase in database', { requestId });
+      const insertTimer = trackDbPerformance('insert', 'launchpad_purchases');
       const purchaseRecord = await launchpadDB.queryRow<PurchaseRecord>`
         INSERT INTO launchpad_purchases (wallet, sol_sent, solf_paid, fee_paid, tx_sig)
         VALUES (
@@ -215,13 +228,25 @@ export const buy = api<BuySOLFRequest, BuySOLFResponse>(
           tx_sig as "txSig",
           created_at as "createdAt"
       `;
-
+      insertTimer();
+      
       if (!purchaseRecord) {
         throw APIError.internal("Failed to record purchase - no data returned");
       }
-
-      console.log("Purchase recorded successfully with ID:", purchaseRecord.id);
-
+      
+      timer();
+      metrics.increment('launchpad_buy_success');
+      metrics.gauge('launchpad_sol_volume', solSpent);
+      metrics.gauge('launchpad_solf_distributed', solfToDistribute);
+      
+      logger.info('Purchase recorded successfully', {
+        requestId,
+        purchaseId: purchaseRecord.id,
+        solSpent,
+        solfDistributed: solfToDistribute,
+        verificationSuccess,
+      });
+      
       return {
         ok: true,
         solSpent: solSpent.toString(),
@@ -230,9 +255,16 @@ export const buy = api<BuySOLFRequest, BuySOLFResponse>(
         txSig: cleanTxSig,
         distributionTxSig: mockDistributionTxSig
       };
-
+      
     } catch (error) {
-      console.error("Launchpad buy error:", error);
+      timer();
+      metrics.increment('launchpad_buy_error');
+      
+      logger.error('Launchpad buy failed', {
+        requestId,
+        wallet: req.wallet?.substring(0, 8) + "...",
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }, error instanceof Error ? error : new Error(String(error)));
       
       if (error instanceof APIError) {
         throw error;
@@ -249,22 +281,20 @@ export const buy = api<BuySOLFRequest, BuySOLFResponse>(
         if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
           throw APIError.unavailable("Database connection failed");
         }
-
+        
         if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-          console.error("Launchpad table missing:", error.message);
+          logger.error('Launchpad table missing', { requestId }, error);
           throw APIError.internal("Launchpad database not properly initialized");
         }
       }
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error("Unexpected error in launchpad buy:", errorMessage);
-      
       throw APIError.internal(`Launchpad service error: ${errorMessage}`);
     }
   }
 );
 
-// Helper function to generate a mock transaction signature for demo purposes
+// Helper function to generate a mock transaction signature for devnet testing
 function generateMockTransactionSignature(): string {
   const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
   let result = '';

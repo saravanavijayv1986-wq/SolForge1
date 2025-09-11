@@ -20,8 +20,8 @@ import {
   getAccount,
   TokenAccountNotFoundError,
 } from '@solana/spl-token';
-import { withRetry, parseSolanaError, formatSolanaError } from '../utils/solana-errors';
-import { TOKEN_CREATION_FEE } from '../config';
+import { withRetry, parseError, getUserFriendlyMessage } from '../utils/error-handling';
+import { TOKEN_CONFIG, SOLANA_ADDRESSES } from '../config';
 import backend from '~backend/client';
 
 export interface CreateTokenWithMetadataArgs {
@@ -76,7 +76,7 @@ export function useEnhancedTokenService() {
         }, 3, 1000);
 
         const balanceInSol = balance / LAMPORTS_PER_SOL;
-        const requiredBalance = TOKEN_CREATION_FEE + 0.05; // Fee + buffer for tx costs
+        const requiredBalance = TOKEN_CONFIG.creationFee + 0.05; // Fee + buffer for tx costs
 
         if (balanceInSol < requiredBalance) {
           throw new Error(`Insufficient SOL balance. Required: ${requiredBalance.toFixed(3)} SOL, Available: ${balanceInSol.toFixed(4)} SOL`);
@@ -101,12 +101,12 @@ export function useEnhancedTokenService() {
         const transaction = new Transaction();
 
         // Add fee payment to platform
-        const platformWallet = new PublicKey("7wBKaVpxKBa31VgY4HBd7xzCu3AxoAzK8LjGr9zn8YxJ"); // Team wallet
+        const platformWallet = new PublicKey(SOLANA_ADDRESSES.teamWallet());
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: platformWallet,
-            lamports: Math.floor(TOKEN_CREATION_FEE * LAMPORTS_PER_SOL),
+            lamports: Math.floor(TOKEN_CONFIG.creationFee * LAMPORTS_PER_SOL),
           })
         );
 
@@ -233,12 +233,8 @@ export function useEnhancedTokenService() {
 
       } catch (error) {
         console.error('Enhanced token creation failed:', error);
-        
-        // Parse and format Solana-specific errors
-        const solanaError = parseSolanaError(error);
-        const formattedError = formatSolanaError(solanaError);
-        
-        throw new Error(formattedError.description);
+        const appError = parseError(error);
+        throw new Error(getUserFriendlyMessage(appError));
       }
     },
     [publicKey, connection, sendTransaction]

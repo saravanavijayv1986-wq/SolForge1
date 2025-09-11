@@ -10,29 +10,18 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, ArrowRight, AlertTriangle, ExternalLink, CheckCircle, Info } from 'lucide-react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { parseSolanaError, formatSolanaError, withRetry } from '../../utils/solana-errors';
+import { withRetry, handleError } from '../../utils/error-handling';
 import backend from '~backend/client';
+import { SOLF_CONFIG, SOLANA_ADDRESSES } from '../../config';
 
 const purchaseSchema = z.object({
   solAmount: z.string().refine((val) => {
     const num = parseFloat(val);
-    return !isNaN(num) && num >= 0.2 && num <= 1000;
-  }, 'SOL amount must be between 0.2 and 1000'),
+    return !isNaN(num) && num >= SOLF_CONFIG.minPurchase && num <= SOLF_CONFIG.maxPurchase;
+  }, `SOL amount must be between ${SOLF_CONFIG.minPurchase} and ${SOLF_CONFIG.maxPurchase}`),
 });
 
 type PurchaseFormData = z.infer<typeof purchaseSchema>;
-
-// Hardcoded wallet addresses for the demo
-const TREASURY_WALLET = "7wBKaVpxKBa31VgY4HBd7xzCu3AxoAzK8LjGr9zn8YxJ";
-const TEAM_WALLET = "3YkFz8vUBa7mLrCcGx4nKzDu5AxoAzK8LjGr9zn8YxJ";
-
-const SOLF_PER_SOL = 10000;
-const FEE_AMOUNT = 0.1;
-
-// Updated tokenomics constants
-const TOTAL_SUPPLY = 500000000; // 500M SOLF
-const TREASURY_ALLOCATION = 250000000; // 250M SOLF for launchpad (50%)
-const MAX_SOL_CAPACITY = TREASURY_ALLOCATION / SOLF_PER_SOL; // 25,000 SOL
 
 export function SOLFPurchaseForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,14 +42,14 @@ export function SOLFPurchaseForm() {
   } = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
-      solAmount: '0.2',
+      solAmount: String(SOLF_CONFIG.minPurchase),
     },
   });
 
   const watchedSolAmount = watch('solAmount');
   const solAmount = parseFloat(watchedSolAmount || '0');
-  const solfAmount = isNaN(solAmount) ? 0 : solAmount * SOLF_PER_SOL;
-  const totalCost = isNaN(solAmount) ? 0 : solAmount + FEE_AMOUNT;
+  const solfAmount = isNaN(solAmount) ? 0 : solAmount * SOLF_CONFIG.exchangeRate;
+  const totalCost = isNaN(solAmount) ? 0 : solAmount + SOLF_CONFIG.platformFee;
 
   const setMaxAmount = () => {
     setValue('solAmount', '10');
@@ -82,36 +71,32 @@ export function SOLFPurchaseForm() {
     try {
       const solAmountNumber = parseFloat(data.solAmount);
       
-      // Check wallet balance with retry logic
       const balance = await withRetry(async () => {
         return await connection.getBalance(publicKey);
       }, 3, 1000);
       
       const balanceInSol = balance / LAMPORTS_PER_SOL;
-      const requiredAmount = solAmountNumber + FEE_AMOUNT + 0.01; // Extra for tx fees
+      const requiredAmount = solAmountNumber + SOLF_CONFIG.platformFee + 0.01;
       
       if (balanceInSol < requiredAmount) {
         throw new Error(`Insufficient balance. Required: ${requiredAmount.toFixed(3)} SOL, Available: ${balanceInSol.toFixed(4)} SOL`);
       }
 
-      // Create transaction
       const transaction = new Transaction();
       
-      // Add transfer to treasury
       transaction.add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
-          toPubkey: new PublicKey(TREASURY_WALLET),
+          toPubkey: new PublicKey(SOLANA_ADDRESSES.treasuryWallet()),
           lamports: Math.floor(solAmountNumber * LAMPORTS_PER_SOL),
         })
       );
 
-      // Add fee transfer to team wallet
       transaction.add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
-          toPubkey: new PublicKey(TEAM_WALLET),
-          lamports: Math.floor(FEE_AMOUNT * LAMPORTS_PER_SOL),
+          toPubkey: new PublicKey(SOLANA_ADDRESSES.teamWallet()),
+          lamports: Math.floor(SOLF_CONFIG.platformFee * LAMPORTS_PER_SOL),
         })
       );
 
@@ -126,10 +111,8 @@ export function SOLFPurchaseForm() {
 
       setProcessingPurchase(true);
 
-      // Wait for confirmation with retry logic
       await connection.confirmTransaction({ signature: txSig, ...(await connection.getLatestBlockhash()) }, 'confirmed');
 
-      // Process purchase through backend
       const response = await backend.launchpad.buy({
         wallet: publicKey.toString(),
         txSig: txSig,
@@ -148,15 +131,7 @@ export function SOLFPurchaseForm() {
 
     } catch (error) {
       console.error('SOLF purchase failed:', error);
-      
-      const solanaError = parseSolanaError(error);
-      const formattedError = formatSolanaError(solanaError);
-      
-      toast({
-        title: formattedError.title,
-        description: formattedError.description,
-        variant: "destructive",
-      });
+      handleError(error, 'SOLF purchase');
     } finally {
       setIsSubmitting(false);
       setCreatingTransaction(false);
@@ -184,7 +159,7 @@ export function SOLFPurchaseForm() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`https://explorer.solana.com/tx/${completedTxSig}`, '_blank')}
+              onClick={() => window.open(`https://explorer.solana.com/tx/${completedTxSig}?cluster=devnet`, '_blank')}
               className="flex items-center space-x-1"
             >
               <ExternalLink className="h-3 w-3" />
@@ -210,40 +185,38 @@ export function SOLFPurchaseForm() {
       <CardHeader>
         <CardTitle>Buy SOLF Tokens</CardTitle>
         <CardDescription>
-          Get SOLF tokens with SOL at a fixed rate from our dedicated 250M treasury allocation
+          Get SOLF tokens with SOL at a fixed rate from our dedicated {SOLF_CONFIG.treasuryAllocation.toLocaleString()} treasury allocation
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Updated Tokenomics Info */}
           <div className="bg-muted rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Exchange Rate:</span>
-              <span className="font-medium">1 SOL = {SOLF_PER_SOL.toLocaleString()} SOLF</span>
+              <span className="font-medium">1 SOL = {SOLF_CONFIG.exchangeRate.toLocaleString()} SOLF</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Platform Fee:</span>
-              <span className="font-medium">{FEE_AMOUNT} SOL per transaction</span>
+              <span className="font-medium">{SOLF_CONFIG.platformFee} SOL per transaction</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Treasury Allocation:</span>
-              <span className="font-medium">{TREASURY_ALLOCATION.toLocaleString()} SOLF (50%)</span>
+              <span className="font-medium">{SOLF_CONFIG.treasuryAllocation.toLocaleString()} SOLF ({SOLF_CONFIG.treasuryAllocation / SOLF_CONFIG.totalSupply * 100}%)</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total SOL Capacity:</span>
-              <span className="font-medium">{MAX_SOL_CAPACITY.toLocaleString()} SOL</span>
+              <span className="font-medium">{(SOLF_CONFIG.treasuryAllocation / SOLF_CONFIG.exchangeRate).toLocaleString()} SOL</span>
             </div>
           </div>
 
-          {/* Supply Information */}
           <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-start space-x-3">
               <Info className="h-5 w-5 text-blue-500 mt-0.5" />
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <h4 className="font-semibold mb-1">Fixed Supply Economics</h4>
                 <ul className="space-y-1 text-xs">
-                  <li>• Total Supply: {TOTAL_SUPPLY.toLocaleString()} SOLF (capped permanently)</li>
-                  <li>• Treasury: {TREASURY_ALLOCATION.toLocaleString()} SOLF available for launchpad</li>
+                  <li>• Total Supply: {SOLF_CONFIG.totalSupply.toLocaleString()} SOLF (capped permanently)</li>
+                  <li>• Treasury: {SOLF_CONFIG.treasuryAllocation.toLocaleString()} SOLF available for launchpad</li>
                   <li>• Mint authority revoked - no new tokens can ever be created</li>
                   <li>• Rate may adjust if demand exceeds current capacity</li>
                 </ul>
@@ -251,17 +224,16 @@ export function SOLFPurchaseForm() {
             </div>
           </div>
 
-          {/* SOL Amount Input */}
           <div className="space-y-2">
             <Label htmlFor="solAmount">SOL Amount</Label>
             <div className="flex space-x-2">
               <Input
                 id="solAmount"
                 type="number"
-                placeholder="0.2"
+                placeholder={String(SOLF_CONFIG.minPurchase)}
                 step="0.1"
-                min="0.2"
-                max="1000"
+                min={SOLF_CONFIG.minPurchase}
+                max={SOLF_CONFIG.maxPurchase}
                 {...register('solAmount')}
                 className={errors.solAmount ? 'border-destructive' : ''}
               />
@@ -279,7 +251,6 @@ export function SOLFPurchaseForm() {
             )}
           </div>
 
-          {/* Purchase Summary */}
           <div className="space-y-3">
             <h4 className="font-medium">Purchase Summary</h4>
             <div className="bg-muted rounded-lg p-4 space-y-2">
@@ -289,7 +260,7 @@ export function SOLFPurchaseForm() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Platform Fee:</span>
-                <span className="font-medium">{FEE_AMOUNT} SOL</span>
+                <span className="font-medium">{SOLF_CONFIG.platformFee} SOL</span>
               </div>
               <div className="border-t pt-2 flex justify-between">
                 <span className="font-medium">Total Cost:</span>
@@ -302,14 +273,13 @@ export function SOLFPurchaseForm() {
             </div>
           </div>
 
-          {/* Important Info */}
           <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-start space-x-3">
               <AlertTriangle className="h-5 w-5 text-blue-500 mt-0.5" />
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <h4 className="font-semibold mb-1">How it works:</h4>
                 <ul className="space-y-1 text-xs">
-                  <li>• Your payment is split: {solAmount.toFixed(2)} SOL to Treasury, {FEE_AMOUNT} SOL to Team</li>
+                  <li>• Your payment is split: {solAmount.toFixed(2)} SOL to Treasury, {SOLF_CONFIG.platformFee} SOL to Team</li>
                   <li>• SOLF tokens are automatically transferred from Treasury wallet</li>
                   <li>• Transaction is final and irreversible</li>
                   <li>• Launchpad stops when Treasury allocation is depleted</li>
@@ -321,7 +291,7 @@ export function SOLFPurchaseForm() {
 
           <Button
             type="submit"
-            disabled={isSubmitting || solAmount < 0.2}
+            disabled={isSubmitting || solAmount < SOLF_CONFIG.minPurchase}
             className="w-full"
             size="lg"
           >

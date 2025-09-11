@@ -1,5 +1,11 @@
 import { api, APIError } from "encore.dev/api";
 import { tokenDB } from "./db";
+import { validateInput } from "../shared/validation";
+import { createLogger } from "../shared/logger";
+import { metrics, trackDbPerformance } from "../shared/monitoring";
+import { TOKEN_CONFIG } from "../config/app";
+
+const logger = createLogger('token-create');
 
 export interface CreateTokenRequest {
   mintAddress: string;
@@ -32,46 +38,32 @@ export interface CreateTokenResponse {
 export const create = api<CreateTokenRequest, CreateTokenResponse>(
   { expose: true, method: "POST", path: "/token/create" },
   async (req) => {
+    const requestId = `token-create-${Date.now()}`;
+    const timer = metrics.timer('token_create_request');
+    
+    logger.info('Token creation request received', {
+      requestId,
+      mintAddress: req.mintAddress,
+      name: req.name,
+      symbol: req.symbol,
+      creatorWallet: req.creatorWallet,
+    });
+    
     try {
-      console.log("Token creation request received:", {
-        mintAddress: req.mintAddress,
-        name: req.name,
-        symbol: req.symbol,
-        decimals: req.decimals,
-        creatorWallet: req.creatorWallet
-      });
-
-      // Validate required fields
-      if (!req.mintAddress || typeof req.mintAddress !== 'string' || req.mintAddress.trim().length === 0) {
-        throw APIError.invalidArgument("Mint address is required and must be a non-empty string");
-      }
+      // Validate input with comprehensive checks
+      validateInput()
+        .validateWalletAddress(req.mintAddress, true)
+        .validateTokenName(req.name, true)
+        .validateTokenSymbol(req.symbol, true)
+        .validateDecimals(req.decimals, true)
+        .validateSupply(req.supply, true)
+        .validateWalletAddress(req.creatorWallet, true)
+        .validateStringLength(req.description || '', 'description', 0, TOKEN_CONFIG.maxDescriptionLength, false)
+        .validateUrl(req.logoUrl || '', 'logoUrl', false)
+        .validateUrl(req.metadataUrl || '', 'metadataUrl', false)
+        .validateTransactionSignature(req.feeTransactionSignature || '', false)
+        .throwIfInvalid();
       
-      if (!req.name || typeof req.name !== 'string' || req.name.trim().length === 0) {
-        throw APIError.invalidArgument("Token name is required and must be a non-empty string");
-      }
-      
-      if (!req.symbol || typeof req.symbol !== 'string' || req.symbol.trim().length === 0) {
-        throw APIError.invalidArgument("Token symbol is required and must be a non-empty string");
-      }
-      
-      if (typeof req.decimals !== 'number' || req.decimals < 0 || req.decimals > 9 || !Number.isInteger(req.decimals)) {
-        throw APIError.invalidArgument("Decimals must be an integer between 0 and 9");
-      }
-      
-      if (!req.supply || typeof req.supply !== 'string' || req.supply.trim().length === 0) {
-        throw APIError.invalidArgument("Supply is required and must be a non-empty string");
-      }
-      
-      if (!req.creatorWallet || typeof req.creatorWallet !== 'string' || req.creatorWallet.trim().length === 0) {
-        throw APIError.invalidArgument("Creator wallet is required and must be a non-empty string");
-      }
-
-      // Validate supply is a valid number
-      const supplyNumber = parseFloat(req.supply.trim());
-      if (isNaN(supplyNumber) || supplyNumber < 0) {
-        throw APIError.invalidArgument("Supply must be a valid positive number");
-      }
-
       // Clean and prepare data
       const cleanedData = {
         mintAddress: req.mintAddress.trim(),
@@ -85,30 +77,57 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
         creatorWallet: req.creatorWallet.trim(),
         feeTransactionSignature: req.feeTransactionSignature?.trim() || null,
       };
-
-      console.log("Cleaned token data:", cleanedData);
-
-      // Test database connection first
+      
+      // Validate supply is a valid number
+      const supplyNumber = parseFloat(cleanedData.supply);
+      if (isNaN(supplyNumber) || supplyNumber <= 0) {
+        throw APIError.invalidArgument("Supply must be a valid positive number");
+      }
+      
+      if (supplyNumber > TOKEN_CONFIG.maxSupply) {
+        throw APIError.invalidArgument(`Supply cannot exceed ${TOKEN_CONFIG.maxSupply}`);
+      }
+      
+      logger.debug('Token data validated and cleaned', {
+        requestId,
+        cleanedData,
+      });
+      
+      // Test database connection
+      const dbTimer = trackDbPerformance('connection_test', 'tokens');
       try {
         await tokenDB.queryRow`SELECT 1 as test`;
-        console.log("Database connection test successful");
+        logger.debug('Database connection test successful', { requestId });
       } catch (dbError) {
-        console.error("Database connection test failed:", dbError);
+        logger.error('Database connection test failed', { requestId }, dbError instanceof Error ? dbError : new Error(String(dbError)));
         throw APIError.unavailable("Database is currently unavailable");
+      } finally {
+        dbTimer();
       }
-
+      
       // Check if token already exists
+      const existsTimer = trackDbPerformance('select', 'tokens');
       const existingToken = await tokenDB.queryRow<{ id: number }>`
         SELECT id FROM tokens WHERE mint_address = ${cleanedData.mintAddress}
       `;
-
+      existsTimer();
+      
       if (existingToken) {
-        console.log("Token already exists with mint address:", cleanedData.mintAddress);
+        logger.warn('Token already exists', {
+          requestId,
+          mintAddress: cleanedData.mintAddress,
+          existingId: existingToken.id,
+        });
         throw APIError.alreadyExists("Token with this mint address already exists");
       }
-
-      // Create the token with explicit column mapping
-      console.log("Inserting token into database...");
+      
+      // Create the token record
+      logger.info('Creating token record in database', {
+        requestId,
+        mintAddress: cleanedData.mintAddress,
+      });
+      
+      const insertTimer = trackDbPerformance('insert', 'tokens');
       const token = await tokenDB.queryRow<CreateTokenResponse>`
         INSERT INTO tokens (
           mint_address,
@@ -153,16 +172,34 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
           creator_wallet as "creatorWallet",
           created_at as "createdAt"
       `;
-
+      insertTimer();
+      
       if (!token) {
+        logger.error('Token creation failed - no data returned', { requestId });
         throw APIError.internal("Failed to create token record - no data returned");
       }
-
-      console.log("Token created successfully with ID:", token.id);
+      
+      timer();
+      metrics.increment('token_create_success');
+      
+      logger.info('Token created successfully', {
+        requestId,
+        tokenId: token.id,
+        mintAddress: token.mintAddress,
+        symbol: token.symbol,
+      });
+      
       return token;
-
+      
     } catch (error) {
-      console.error("Token creation error:", error);
+      timer();
+      metrics.increment('token_create_error');
+      
+      logger.error('Token creation failed', {
+        requestId,
+        mintAddress: req.mintAddress,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }, error instanceof Error ? error : new Error(String(error)));
       
       if (error instanceof APIError) {
         throw error;
@@ -177,7 +214,7 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
         }
         
         if (errorMessage.includes('invalid input syntax') || errorMessage.includes('invalid type')) {
-          console.error("Database syntax error:", error.message);
+          logger.error('Database syntax error', { requestId }, error);
           throw APIError.invalidArgument("Invalid data format provided");
         }
         
@@ -185,16 +222,11 @@ export const create = api<CreateTokenRequest, CreateTokenResponse>(
           throw APIError.unavailable("Database connection failed");
         }
         
-        if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
-          console.error("Database schema error - missing column:", error.message);
-          throw APIError.internal("Database schema error. Please contact support.");
-        }
-
         if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-          console.error("Database table missing:", error.message);
-          throw APIError.internal("Database not properly initialized. Please contact support.");
+          logger.error('Database table missing', { requestId }, error);
+          throw APIError.internal("Database not properly initialized");
         }
-
+        
         if (errorMessage.includes('check constraint')) {
           throw APIError.invalidArgument("Data validation failed - check your input values");
         }

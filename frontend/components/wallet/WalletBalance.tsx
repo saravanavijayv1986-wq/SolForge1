@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { NETWORK_CONFIG } from '../../config';
-import { parseSolanaError, formatSolanaError, withRetry } from '../../utils/solana-errors';
+import { NETWORK_CONFIG, getExplorerUrl, formatSolAmount } from '../../config';
+import { withRetry, handleError, parseError, getUserFriendlyMessage, isRetryableError } from '../../utils/error-handling';
 
 export function WalletBalance() {
   const { publicKey, connected } = useWallet();
@@ -22,7 +22,7 @@ export function WalletBalance() {
       }, 3, 1000);
       
       return {
-        balance: (balanceInLamports / 1e9).toString(),
+        balance: formatSolAmount(balanceInLamports),
         lamports: balanceInLamports.toString(),
         lastUpdated: Date.now()
       };
@@ -30,29 +30,30 @@ export function WalletBalance() {
     enabled: connected && !!publicKey,
     refetchInterval: 30000, // Refresh every 30 seconds
     retry: (failureCount, error) => {
-      const solanaError = parseSolanaError(error);
-      if (solanaError.code === 'INVALID_ADDRESS') {
+      if (!isRetryableError(error)) {
         return false;
       }
       return failureCount < 2;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    onError: (error) => {
+      console.error('Wallet balance fetch failed:', error);
+    },
   });
-
-  const formatBalance = (balance: string) => {
-    const num = parseFloat(balance);
-    if (num === 0) return '0';
-    if (num < 0.001) return '<0.001';
-    return num.toFixed(4);
-  };
 
   const hasLowBalance = balance && parseFloat(balance.balance) < NETWORK_CONFIG.minBalanceForCreation;
 
   const handleExplorerClick = () => {
     if (publicKey) {
-      const explorerUrl = `${NETWORK_CONFIG.explorerUrl}/address/${publicKey.toString()}`;
+      const explorerUrl = getExplorerUrl(publicKey.toString(), 'address');
       window.open(explorerUrl, '_blank');
     }
+  };
+
+  const handleRefresh = () => {
+    refetch().catch((err) => {
+      handleError(err, 'wallet balance refresh');
+    });
   };
 
   if (!connected || !publicKey) {
@@ -80,9 +81,10 @@ export function WalletBalance() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => refetch()}
+              onClick={handleRefresh}
               disabled={isRefetching}
               className="h-auto p-1"
+              title="Refresh balance"
             >
               <RefreshCw className={`h-3 w-3 ${isRefetching ? 'animate-spin' : ''}`} />
             </Button>
@@ -99,16 +101,12 @@ export function WalletBalance() {
           <div className="text-center py-2">
             <p className="text-sm text-destructive">Failed to load balance</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {(() => {
-                const solanaError = parseSolanaError(error);
-                const formattedError = formatSolanaError(solanaError);
-                return formattedError.description;
-              })()}
+              {getUserFriendlyMessage(parseError(error))}
             </p>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetch()}
+              onClick={handleRefresh}
               className="mt-2"
             >
               Retry
@@ -117,7 +115,7 @@ export function WalletBalance() {
         ) : balance ? (
           <div className="space-y-2">
             <div className="text-2xl font-bold">
-              {formatBalance(balance.balance)} SOL
+              {balance.balance} SOL
             </div>
             <div className="text-xs text-muted-foreground">
               {parseInt(balance.lamports).toLocaleString()} lamports
