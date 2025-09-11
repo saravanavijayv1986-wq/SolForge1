@@ -114,4 +114,12 @@ export function WalletConnectPrompt() {
                       Make sure your wallet is configured for Devnet.
                     </p>
                   </div>
-                
+                </div>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

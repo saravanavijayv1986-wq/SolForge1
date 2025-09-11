@@ -88,6 +88,12 @@ export const WALLET_CONFIG = {
   },
 } as const;
 
+// Solana addresses configuration - using default addresses for frontend
+export const SOLANA_ADDRESSES = {
+  treasuryWallet: () => "11111111111111111111111111111112", // Default system program ID
+  teamWallet: () => "11111111111111111111111111111112", // Default system program ID
+} as const;
+
 // UI configuration
 export const UI_CONFIG = {
   toast: {
@@ -143,27 +149,6 @@ export const SECURITY_CONFIG = {
   },
 } as const;
 
-// Validation utilities
-export const validateConfig = () => {
-  // Validate required configuration
-  if (!SOLANA_CONFIG.rpcEndpoint) {
-    throw new Error('Solana RPC endpoint is required');
-  }
-  
-  if (TOKEN_CONFIG.creationFee <= 0) {
-    throw new Error('Token creation fee must be positive');
-  }
-  
-  if (SOLF_CONFIG.exchangeRate <= 0) {
-    throw new Error('SOLF exchange rate must be positive');
-  }
-  
-  return true;
-};
-
-// Initialize configuration validation
-validateConfig();
-
 // Export utility functions
 export const getExplorerUrl = (address: string, type: 'address' | 'tx' = 'address'): string => {
   return `${NETWORK_CONFIG.explorerUrl}/${type}/${address}${NETWORK_CONFIG.explorerCluster}`;
@@ -201,3 +186,6 @@ if (typeof window !== 'undefined') {
     (DEBUG_CONFIG as any).enabled = true;
   }
 }
+
+// Token creation fee
+export const TOKEN_CREATION_FEE = TOKEN_CONFIG.creationFee;

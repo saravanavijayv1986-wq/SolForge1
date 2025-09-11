@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Transaction, Commitment, ConfirmOptions } from "@solana/web3.js";
-import { SOLANA_CONFIG, SECRETS } from "../config/app";
+import { SOLANA_CONFIG } from "../config/app";
 import { createLogger } from "./logger";
 import { metrics, trackDbPerformance } from "./monitoring";
 
@@ -27,8 +27,11 @@ export class SolanaService {
   private backupEndpoints: string[] = [];
 
   constructor(config?: Partial<SolanaConnectionConfig>) {
+    // Use hardcoded devnet RPC URL as fallback
+    const rpcUrl = "https://api.devnet.solana.com";
+
     this.config = {
-      endpoint: SECRETS.solanaRpcUrl(),
+      endpoint: rpcUrl,
       commitment: SOLANA_CONFIG.commitment,
       timeout: SOLANA_CONFIG.rpcTimeout,
       maxRetries: SOLANA_CONFIG.maxRetries,

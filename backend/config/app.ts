@@ -48,20 +48,12 @@ export const RATE_LIMIT_CONFIG = {
   skipFailedRequests: false,
 } as const;
 
-// Secrets configuration
+// Secrets configuration - with fallback values for development
 export const SECRETS = {
   solanaRpcUrl: secret("SolanaRpcUrl"),
   databaseUrl: secret("DatabaseUrl"),
   redisUrl: secret("RedisUrl"),
   monitoringApiKey: secret("MonitoringApiKey"),
-} as const;
-
-// Solana addresses configuration
-export const SOLANA_ADDRESSES = {
-  // Platform treasury wallet (to be configured via environment)
-  treasuryWallet: secret("TreasuryWallet"),
-  // Team wallet for fees (to be configured via environment)
-  teamWallet: secret("TeamWallet"),
 } as const;
 
 // SOLF token configuration
@@ -76,6 +68,29 @@ export const SOLF_CONFIG = {
   minPurchase: 0.2, // SOL
   maxPurchase: 1000, // SOL
 } as const;
+
+// Default Solana addresses for development/devnet
+export const DEFAULT_ADDRESSES = {
+  // Default devnet addresses - these should be replaced with actual addresses via secrets
+  treasuryWallet: "11111111111111111111111111111112", // System program ID as fallback
+  teamWallet: "11111111111111111111111111111112", // System program ID as fallback
+} as const;
+
+// Function to get wallet addresses with fallbacks
+export const getWalletAddresses = () => {
+  try {
+    const treasurySecret = secret("TreasuryWallet");
+    const teamSecret = secret("TeamWallet");
+    
+    return {
+      treasuryWallet: treasurySecret() || DEFAULT_ADDRESSES.treasuryWallet,
+      teamWallet: teamSecret() || DEFAULT_ADDRESSES.teamWallet,
+    };
+  } catch (error) {
+    console.warn("Unable to load wallet secrets, using default addresses:", error);
+    return DEFAULT_ADDRESSES;
+  }
+};
 
 // Validation rules
 export const VALIDATION_RULES = {
